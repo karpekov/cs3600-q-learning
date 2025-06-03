@@ -62,7 +62,7 @@ pip install pygame matplotlib numpy networkx
 Or use the provided conda environment:
 ```bash
 conda env create -f environment.yml
-conda activate cs3600-mdp
+conda activate cs3600-q-learning
 ```
 
 ## Examples

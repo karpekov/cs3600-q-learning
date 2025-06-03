@@ -10,6 +10,7 @@ Usage:
     python mdp_viz.py --episode-skip 10    # Skip episodes, showing only every 10th episode
     python mdp_viz.py --experiments --episode-skip 50  # Load multiple experiments and skip every 50 episodes
     python mdp_viz.py --human-play         # Play the game manually by selecting actions
+    python mdp_viz.py --human-play --graph-type complex_maze
 """
 
 import os
@@ -113,48 +114,91 @@ class MDPVisualizer:
         graph_name = graph_type if graph_type else "mixed"
         print(f"Loading experiments from {experiments_dir} ({graph_name})...")
 
-        # Find all experiment directories
-        for exp_dir in sorted(os.listdir(experiments_dir)):
-            exp_path = os.path.join(experiments_dir, exp_dir)
-            if os.path.isdir(exp_path):
-                # Look for exploration_data.json in each experiment directory
-                data_file = os.path.join(exp_path, "exploration_data.json")
-                if os.path.exists(data_file):
-                    try:
-                        with open(data_file, 'r') as f:
-                            data = json.load(f)
+        # Check if this directory uses the new nested structure (has s_0, s_1, etc. subdirectories)
+        has_stochasticity_subdirs = any(
+            item.startswith('s_') and os.path.isdir(os.path.join(experiments_dir, item))
+            for item in os.listdir(experiments_dir)
+        )
 
-                        # Extract experiment name from directory
-                        exp_name = exp_dir
+        if has_stochasticity_subdirs:
+            # New nested structure: experiments_dir/s_0/exp_1/...
+            print(f"  Using new nested structure with stochasticity subdirectories")
 
-                        # Extract parameters
-                        epsilon = data['agent']['epsilon']
-                        alpha = data['agent']['alpha']
-                        gamma = data['agent']['gamma']
-                        step_cost = data['environment']['step_cost']
-                        stochasticity = data['environment'].get('stochasticity', 1)  # Default to 1 for backward compatibility
+            # Find all stochasticity level directories (s_0, s_1, etc.)
+            for stoch_dir in sorted(os.listdir(experiments_dir)):
+                if stoch_dir.startswith('s_') and os.path.isdir(os.path.join(experiments_dir, stoch_dir)):
+                    stoch_path = os.path.join(experiments_dir, stoch_dir)
+                    stoch_level = stoch_dir[2:]  # Extract level from 's_0' -> '0'
+                    print(f"  Loading from stochasticity level {stoch_level} ({stoch_dir})...")
 
-                        # Create experiment info
-                        exp_info = {
-                            "name": exp_name,
-                            "path": data_file,
-                            "data": data,
-                            "graph_type": graph_type,  # Track which graph this experiment belongs to
-                            "params": {
-                                "epsilon": epsilon,
-                                "alpha": alpha,
-                                "gamma": gamma,
-                                "step_cost": step_cost,
-                                "stochasticity": stochasticity
-                            }
-                        }
-
-                        self.experiments.append(exp_info)
-                        print(f"  Loaded: {exp_name} (ε={epsilon}, α={alpha}, γ={gamma}, cost={step_cost}, stoch={stochasticity})")
-                    except Exception as e:
-                        print(f"  Error loading {data_file}: {e}")
+                    # Find all experiment directories within this stochasticity level
+                    for exp_dir in sorted(os.listdir(stoch_path)):
+                        exp_path = os.path.join(stoch_path, exp_dir)
+                        if os.path.isdir(exp_path):
+                            self._load_single_experiment(exp_path, exp_dir, graph_type, stoch_level)
+        else:
+            # Old flat structure: experiments_dir/exp_1/...
+            print(f"  Using legacy flat structure")
+            # Find all experiment directories
+            for exp_dir in sorted(os.listdir(experiments_dir)):
+                exp_path = os.path.join(experiments_dir, exp_dir)
+                if os.path.isdir(exp_path):
+                    self._load_single_experiment(exp_path, exp_dir, graph_type)
 
         print(f"Loaded {len(self.experiments)} experiments for {graph_name}")
+
+    def _load_single_experiment(self, exp_path, exp_name, graph_type=None, stoch_level=None):
+        """Load a single experiment from its directory"""
+        # Look for exploration_data.json in the experiment directory
+        data_file = os.path.join(exp_path, "exploration_data.json")
+        if os.path.exists(data_file):
+            try:
+                with open(data_file, 'r') as f:
+                    data = json.load(f)
+
+                # Extract parameters
+                epsilon = data['agent']['epsilon']
+                alpha = data['agent']['alpha']
+                gamma = data['agent']['gamma']
+                step_cost = data['environment']['step_cost']
+                stochasticity = data['environment'].get('stochasticity', 1)  # Default to 1 for backward compatibility
+                epsilon_decay = data['agent'].get('epsilon_decay', 1.0)  # Default to no decay for backward compatibility
+                epsilon_min = data['agent'].get('epsilon_min', 0.01)  # Default value
+                alpha_decay_rate = data['agent'].get('alpha_decay_rate', 0.0)  # Default to no decay
+                initial_alpha = data['agent'].get('initial_alpha', alpha)  # Default value
+                optimistic_init = data['agent'].get('optimistic_init', 0.0)  # Default value
+
+                # Add stochasticity level to experiment name if provided
+                if stoch_level is not None:
+                    display_name = f"s{stoch_level}_{exp_name}"
+                else:
+                    display_name = exp_name
+
+                # Create experiment info
+                exp_info = {
+                    "name": display_name,
+                    "path": data_file,
+                    "data": data,
+                    "graph_type": graph_type,  # Track which graph this experiment belongs to
+                    "stochasticity_level": stoch_level,  # Track stochasticity level
+                    "params": {
+                        "epsilon": epsilon,
+                        "alpha": alpha,
+                        "gamma": gamma,
+                        "step_cost": step_cost,
+                        "stochasticity": stochasticity,
+                        "epsilon_decay": epsilon_decay,
+                        "epsilon_min": epsilon_min,
+                        "alpha_decay_rate": alpha_decay_rate,
+                        "initial_alpha": initial_alpha,
+                        "optimistic_init": optimistic_init
+                    }
+                }
+
+                self.experiments.append(exp_info)
+                print(f"    Loaded: {display_name} (ε={epsilon}, α={alpha}, γ={gamma}, cost={step_cost}, stoch={stochasticity}, ε_decay={epsilon_decay}, ε_min={epsilon_min}, α_decay={alpha_decay_rate}, α_initial={initial_alpha}, Q_init={optimistic_init})")
+            except Exception as e:
+                print(f"    Error loading {data_file}: {e}")
 
     def load_all_experiments(self, base_experiments_dir):
         """Load experiments from all graph type subdirectories"""
@@ -195,6 +239,10 @@ class MDPVisualizer:
         gamma = data['agent']['gamma']
         step_cost = data['environment']['step_cost']
         stochasticity = data['environment'].get('stochasticity', 1)  # Default to 1 for backward compatibility
+        epsilon_decay = data['agent'].get('epsilon_decay', 1.0)  # Default to no decay for backward compatibility
+        epsilon_min = data['agent'].get('epsilon_min', 0.01)  # Default value
+        alpha_decay_rate = data['agent'].get('alpha_decay_rate', 0.0)  # Default to no decay
+        initial_alpha = data['agent'].get('initial_alpha', alpha)  # Default value
 
         # Create experiment info
         exp_info = {
@@ -206,7 +254,11 @@ class MDPVisualizer:
                 "alpha": alpha,
                 "gamma": gamma,
                 "step_cost": step_cost,
-                "stochasticity": stochasticity
+                "stochasticity": stochasticity,
+                "epsilon_decay": epsilon_decay,
+                "epsilon_min": epsilon_min,
+                "alpha_decay_rate": alpha_decay_rate,
+                "initial_alpha": initial_alpha
             }
         }
 
@@ -245,36 +297,38 @@ class MDPVisualizer:
         terminal_states = set(self.terminal_rewards.keys())
 
         # Check for complex_maze pattern first (most specific)
-        if 'GOAL' in terminal_states and 'TRAP1' in terminal_states:
-            _, _, coords = get_graph('complex_maze')
-            return coords
+        # New complex_maze has 'GOAL' and coordinate-based states like "(16,3)"
+        has_goal = 'GOAL' in terminal_states
+        has_coord_states = any(s.startswith('(') and ',' in s and s.endswith(')') for s in states)
+
+        if has_goal and has_coord_states and len(states) > 50:  # Complex maze has many states
+            # Verify all states exist in complex_maze coordinates
+            try:
+                _, _, coords = get_graph('complex_maze')
+                if all(state in coords for state in states):
+                    return coords
+            except Exception:
+                pass
 
         # Check for simple_grid pattern (has numbered nodes N1, N2, etc.)
         numbered_nodes = [s for s in states if s.startswith('N') and s[1:].isdigit()]
         if len(numbered_nodes) >= 5:  # Simple grid has many numbered nodes
-            _, _, coords = get_graph('simple_grid')
-            return coords
+            try:
+                _, _, coords = get_graph('simple_grid')
+                if all(state in coords for state in states):
+                    return coords
+            except Exception:
+                pass
 
         # Check for custom_rooms pattern
         if 'S' in states and 'J' in terminal_states and 'T' in terminal_states:
             if len(states) >= 10:  # Custom rooms has 13 states
-                _, _, coords = get_graph('custom_rooms')
-                return coords
-
-        # If no clear pattern is detected, try to match by number of states and terminal rewards
-        num_states = len(states)
-        num_terminals = len(terminal_states)
-
-        if num_states <= 12 and num_terminals == 2:
-            # Likely simple_grid or similar small graph
-            if any(s.startswith('N') for s in states):
-                _, _, coords = get_graph('simple_grid')
-                return coords
-
-        if num_states >= 15 and num_terminals >= 3:
-            # Likely complex_maze
-            _, _, coords = get_graph('complex_maze')
-            return coords
+                try:
+                    _, _, coords = get_graph('custom_rooms')
+                    if all(state in coords for state in states):
+                        return coords
+                except Exception:
+                    pass
 
         # Final fallback: use the graph type that contains all required states
         for graph_type in AVAILABLE_GRAPHS:
@@ -284,15 +338,26 @@ class MDPVisualizer:
                 if all(state in coords for state in states):
                     print(f"Detected graph type: {graph_type} (by state matching)")
                     return coords
-            except:
+            except Exception:
                 continue
 
-        # Ultimate fallback to custom_rooms with warning
-        print(f"Warning: Could not detect graph type from data with states: {sorted(states)}")
-        print(f"Terminal states: {sorted(terminal_states)}")
-        print(f"Using custom_rooms coordinates - this may cause visualization issues.")
-        _, _, coords = get_graph('custom_rooms')
-        return coords
+        # Ultimate fallback: create custom coordinates for the unknown graph
+        print(f"Note: Creating custom layout for graph with {len(states)} states")
+
+        # Generate coordinates for all states in a grid layout
+        all_states = list(states)
+        custom_coords = {}
+
+        # Try to arrange states in a reasonable grid
+        import math
+        grid_size = math.ceil(math.sqrt(len(all_states)))
+
+        for i, state in enumerate(sorted(all_states)):
+            x = i % grid_size
+            y = i // grid_size
+            custom_coords[state] = (x * 2, y * 2)  # Space them out
+
+        return custom_coords
 
     def get_experiment_count(self):
         """Get the number of loaded experiments"""
@@ -470,7 +535,7 @@ class MDPVisualizer:
         speed_index = 1  # Start with Medium speed
         speed = speed_values[speed_index]
         frame_counter = 0
-        show_policy = True
+        show_policy = False
         show_values = True
         show_path = True
 
@@ -574,12 +639,68 @@ class MDPVisualizer:
             def set_disabled(self, disabled):
                 self.disabled = disabled
 
-        # Create UI buttons
-        try:
-            button_font = pygame.font.SysFont("Arial", 18, bold=True)
-        except:
-            button_font = pygame.font.SysFont(None, 18)
+        # Scale coordinates to screen
+        padding = 80
+        padding_top = 240  # Increased top padding for text info
+        # Calculate bounds dynamically from room coordinates
+        x_coords = [coord[0] for coord in self.room_coords.values()]
+        y_coords = [coord[1] for coord in self.room_coords.values()]
+        min_x, max_x = min(x_coords), max(x_coords)
+        min_y, max_y = min(y_coords), max(y_coords)
 
+        scale_x = (screen_width - 2 * padding) / (max_x - min_x)
+        scale_y = (screen_height - padding - padding_top) / (max_y - min_y)
+        scale = min(scale_x, scale_y)
+
+        # Limit maximum scale for large mazes and ensure minimum scale
+        max_scale = 40.0  # Maximum scale to prevent overly large rooms
+        min_scale = 15.0  # Minimum scale to ensure readability
+        scale = max(min_scale, min(scale, max_scale))
+
+        # Function to convert room coordinates to screen coordinates
+        def room_to_screen(x, y):
+            screen_x = padding + (x - min_x) * scale
+            # Flip y-axis since pygame's origin is at the top left
+            # Use padding_top instead of padding for the top margin
+            screen_y = screen_height - padding - (y - min_y) * scale
+            return (int(screen_x), int(screen_y))
+
+        # Pre-calculate room positions
+        room_positions = {
+            room: room_to_screen(x, y) for room, (x, y) in self.room_coords.items()
+        }
+
+        # Scale room size based on scale factor
+        room_size = int(max(20, min(80, scale * 0.8)))  # Adaptive room size
+
+        # Create fonts - make room labels smaller for large graphs, but keep UI fonts normal
+        num_states = len(self.room_coords)
+        if num_states > 30:  # Large graph like complex_maze
+            room_font_size = 8  # Small font for room labels only
+        else:  # Small/medium graphs
+            room_font_size = 26  # Normal size for room labels
+
+        # UI fonts always stay normal size for readability
+        ui_font_size = 26
+        ui_small_font_size = 20
+        ui_tiny_font_size = 16
+        button_font_size = 18
+
+        try:
+            room_font = pygame.font.SysFont("Arial", room_font_size)  # For room labels
+            font = pygame.font.SysFont("Arial", ui_font_size)  # For main UI text
+            small_font = pygame.font.SysFont("Arial", ui_small_font_size)  # For secondary UI text
+            tiny_font = pygame.font.SysFont("Arial", ui_tiny_font_size)  # For Q-values
+            button_font = pygame.font.SysFont("Arial", button_font_size, bold=True)
+        except:
+            # Fallback to default fonts
+            room_font = pygame.font.SysFont(None, room_font_size)
+            font = pygame.font.SysFont(None, ui_font_size)
+            small_font = pygame.font.SysFont(None, ui_small_font_size)
+            tiny_font = pygame.font.SysFont(None, ui_tiny_font_size)
+            button_font = pygame.font.SysFont(None, button_font_size)
+
+        # Create UI buttons
         button_width = 120
         button_height = 36
         button_margin = 10
@@ -649,43 +770,6 @@ class MDPVisualizer:
             prev_step_button, next_step_button, speed_button, skip_button, toggle_policy_button,
             toggle_values_button, toggle_path_button
         ] + experiment_buttons
-
-        # Scale coordinates to screen
-        padding = 80
-        padding_top = 240  # Increased top padding for text info
-        min_x, min_y = 0, 0
-        max_x, max_y = 9, 7
-
-        scale_x = (screen_width - 2 * padding) / (max_x - min_x)
-        scale_y = (screen_height - padding - padding_top) / (max_y - min_y)
-        scale = min(scale_x, scale_y)
-
-        # Function to convert room coordinates to screen coordinates
-        def room_to_screen(x, y):
-            screen_x = padding + (x - min_x) * scale
-            # Flip y-axis since pygame's origin is at the top left
-            # Use padding_top instead of padding for the top margin
-            screen_y = screen_height - padding - (y - min_y) * scale
-            return (int(screen_x), int(screen_y))
-
-        # Pre-calculate room positions on screen
-        room_positions = {
-            room: room_to_screen(x, y) for room, (x, y) in self.room_coords.items()
-        }
-
-        # Increase room size for better visibility
-        room_size = int(ROOM_SIZE * scale * 1.2)
-
-        # Use better fonts
-        try:
-            font = pygame.font.SysFont("Arial", 26)
-            small_font = pygame.font.SysFont("Arial", 20)
-            tiny_font = pygame.font.SysFont("Arial", 16)
-        except:
-            # Fallback to default fonts
-            font = pygame.font.SysFont(None, 26)
-            small_font = pygame.font.SysFont(None, 20)
-            tiny_font = pygame.font.SysFont(None, 16)
 
         # Create heatmap colormap for Q-values
         def get_q_color(q_value, min_val=-10, max_val=10):
@@ -943,7 +1027,14 @@ class MDPVisualizer:
             for room, pos in room_positions.items():
                 # Choose room color based on terminal state, current position, and exploration
                 if current_state and room == current_state:
-                    color = pygame.Color('#ffcc00')  # Highlight current room
+                    # If current state is a terminal state, use terminal color; otherwise use yellow highlight
+                    if room in self.terminal_rewards:
+                        if self.terminal_rewards[room] > 0:
+                            color = pygame.Color(COLORS['goal'])  # Green for positive terminal
+                        else:
+                            color = pygame.Color(COLORS['pit'])   # Red for negative terminal
+                    else:
+                        color = pygame.Color('#ffcc00')  # Yellow highlight for non-terminal current room
                 elif room in self.terminal_rewards:
                     if self.terminal_rewards[room] > 0:
                         color = pygame.Color(COLORS['goal'])  # Goal room
@@ -990,43 +1081,8 @@ class MDPVisualizer:
                 if room in self.terminal_rewards:
                     label += f"\n{self.terminal_rewards[room]}"
 
-                text = font.render(label, True, label_color)
+                text = room_font.render(label, True, label_color)
                 screen.blit(text, (pos[0] - text.get_width()//2, pos[1] - text.get_height()//2))
-
-            # Now draw Q-values on top of everything so they're not hidden by rooms
-            if show_values:
-                for room, actions in current_q_values.items():
-                    pos1 = room_positions[room]
-
-                    # Count total actions from this room for positioning
-                    total_actions = len(actions) if room in current_q_values else 0
-
-                    for action_str, q_val in actions.items():
-                        action_idx = int(action_str)
-
-                        # Make sure action index is valid
-                        if action_idx >= len(self.adj[room]):
-                            continue
-
-                        # Get the target room for this action
-                        target = self.adj[room][action_idx]
-                        pos2 = room_positions[target]
-
-                        # Get position near the source node but not on top of it
-                        label_pos = get_edge_q_position(pos1, pos2, action_idx, total_actions)
-
-                        # Draw background with heatmap color
-                        q_text = tiny_font.render(f"{q_val:.2f}", True, pygame.Color('#000000'))
-                        text_width, text_height = q_text.get_width() + 6, q_text.get_height() + 4
-
-                        # Create surface with alpha support
-                        text_bg = pygame.Surface((text_width, text_height), pygame.SRCALPHA)
-                        bg_color = get_q_color(q_val)
-                        pygame.draw.rect(text_bg, bg_color, (0, 0, text_width, text_height), border_radius=5)
-
-                        # Blit the background and text
-                        screen.blit(text_bg, (label_pos[0] - 3, label_pos[1] - 2))
-                        screen.blit(q_text, label_pos)
 
             # Draw policy arrows if enabled
             if show_policy:
@@ -1109,8 +1165,8 @@ class MDPVisualizer:
                                       path_points[-1], pulse_size)
 
             # Draw UI elements with better styling
-            # Create background panel for UI elements with more height
-            ui_bg = pygame.Surface((screen_width - 340, 120))
+            # Create background panel for UI elements with more height to accommodate new metadata
+            ui_bg = pygame.Surface((screen_width - 340, 180))
             ui_bg.fill(pygame.Color('#f8f9fa'))
             ui_bg.set_alpha(230)
             screen.blit(ui_bg, (20, 20))
@@ -1119,12 +1175,35 @@ class MDPVisualizer:
             if len(self.experiments) > 1:
                 current_exp = self.experiments[self.current_experiment_index]
                 exp_params = current_exp["params"]
-                exp_text = f"Experiment {self.current_experiment_index + 1}/{len(self.experiments)}: " + \
-                          f"ε={exp_params['epsilon']}, α={exp_params['alpha']}, " + \
-                          f"γ={exp_params['gamma']}, cost={exp_params['step_cost']}, stoch={exp_params['stochasticity']}"
-                exp_label = font.render(exp_text, True, pygame.Color('#000000'))
+                exp_data = current_exp["data"]
+                initial_epsilon = exp_data["agent"].get("initial_epsilon", exp_params["epsilon"])
+
+                # Get data storage info
+                data_storage = exp_data.get("data_storage", {})
+                total_episodes = data_storage.get("total_episodes", len(exp_data.get("total_reward_history", [])))
+                detailed_episodes = data_storage.get("detailed_episodes_stored", len(exp_data.get("episodes", [])))
+                store_every = data_storage.get("store_episode_details_every", 100)
+
+                # Main experiment parameters (truncate alpha values)
+                exp_text = f"Experiment {self.current_experiment_index + 1}/{len(self.experiments)}: "
+                exp_label = small_font.render(exp_text, True, pygame.Color('#000000'))
                 screen.blit(exp_label, (40, 30))
-                y_offset = 40
+
+                exp_metadata_text = f"ε_start={initial_epsilon:.4f}, ε_decay={exp_params['epsilon_decay']:.4f}, ε_final={exp_params['epsilon']:.4f}, " + \
+                    f"α_start={exp_params['initial_alpha']:.4f}, α_final={exp_params['alpha']:.4f}, α_decay={exp_params['alpha_decay_rate']:.4f}, " + \
+                    f"γ={exp_params['gamma']}, cost={exp_params['step_cost']}, stoch={exp_params['stochasticity']}"
+                exp_metadata_label = tiny_font.render(exp_metadata_text, True, pygame.Color('#666666'))
+                screen.blit(exp_metadata_label, (40, 55))
+
+                # Data storage and replay info
+                data_info_text = f"Total training: {total_episodes:,} episodes | Every {store_every}th episode stored | {detailed_episodes} episodes stored"
+                if hasattr(current_exp, "stochasticity_level") and current_exp.get("stochasticity_level"):
+                    data_info_text += f", Stoch Level: {current_exp['stochasticity_level']}"
+
+                data_info_label = tiny_font.render(data_info_text, True, pygame.Color('#666666'))
+                screen.blit(data_info_label, (40, 75))
+
+                y_offset = 65
             else:
                 y_offset = 0
 
@@ -1147,6 +1226,39 @@ class MDPVisualizer:
                         f"State: {step_data['state']} - Action: {step_data['action']} - Intended: {step_data['intended']} - Next: {step_data['next_state']} - Reward: {step_data['reward']:.2f}",
                         True, pygame.Color('#000000'))
                     screen.blit(action_text, (40, 105 + y_offset))
+
+            # Additional learning progress metadata
+            if len(self.experiments) > 1:
+                current_exp = self.experiments[self.current_experiment_index]
+                exp_data = current_exp["data"]
+
+                # Calculate episode position in training
+                actual_episode_num = episode.get('episode_num', episode_index)
+                total_episodes = len(exp_data.get("total_reward_history", []))
+                learning_progress = (actual_episode_num + 1) / total_episodes if total_episodes > 0 else 0
+
+                # Get episode context
+                episode_epsilon = episode.get('epsilon', exp_params.get('epsilon', 0))
+                episode_alpha = episode.get('alpha', exp_params.get('alpha', 0))
+
+                # Learning progress info
+                progress_text = f"Learning Progress: ε={episode_epsilon:.3f}, α={episode_alpha:.3f}"
+                progress_label = tiny_font.render(progress_text, True, pygame.Color('#0066cc'))
+                screen.blit(progress_label, (40, 130 + y_offset))
+
+                # Performance context
+                if hasattr(exp_data, 'total_reward_history') or 'total_reward_history' in exp_data:
+                    reward_history = exp_data.get('total_reward_history', [])
+                    if reward_history and actual_episode_num < len(reward_history):
+                        # Calculate recent performance around this episode
+                        window_start = max(0, actual_episode_num - 50)
+                        window_end = min(len(reward_history), actual_episode_num + 51)
+                        recent_rewards = reward_history[window_start:window_end]
+                        avg_reward = sum(recent_rewards) / len(recent_rewards) if recent_rewards else 0
+
+                        performance_text = f"Performance Context: Avg reward (±50 episodes): {avg_reward:.2f}"
+                        performance_label = tiny_font.render(performance_text, True, pygame.Color('#28a745'))
+                        screen.blit(performance_label, (350, 130 + y_offset))
 
             # Show legend for Q-value colors with standard colormap
             legend_width = 150
@@ -1226,7 +1338,7 @@ class MDPVisualizer:
             adj, terminal_rewards, room_coords = get_graph(override_graph_type)
             self.room_coords = room_coords
             step_cost = -1.0  # Default step cost for human play
-            stochasticity = 1  # Default stochasticity for human play
+            stochasticity = 0  # Default stochasticity for human play
         else:
             # Load environment from the data (existing behavior)
             adj = self.data['environment']['adjacency']
@@ -1234,7 +1346,7 @@ class MDPVisualizer:
             step_cost = self.data['environment']['step_cost']
             stochasticity = self.data['environment'].get('stochasticity', 1)
 
-        gamma = 0.9       # Fixed gamma as requested
+        gamma = 0.95       # Fixed gamma as requested
 
         # Set up environment
         from q_learning import RoomEnvironment
@@ -1333,12 +1445,23 @@ class MDPVisualizer:
         # Set up visualization parameters
         padding = 80
         padding_top = 240  # Increased top padding for text info
-        min_x, min_y = 0, 0
-        max_x, max_y = 9, 7
+        # Calculate bounds dynamically from room coordinates
+        x_coords = [coord[0] for coord in self.room_coords.values()]
+        y_coords = [coord[1] for coord in self.room_coords.values()]
+        min_x, max_x = min(x_coords), max(x_coords)
+        min_y, max_y = min(y_coords), max(y_coords)
 
         scale_x = (screen_width - 2 * padding) / (max_x - min_x)
         scale_y = (screen_height - padding - padding_top) / (max_y - min_y)
         scale = min(scale_x, scale_y)
+
+        # Limit maximum scale for large mazes and ensure minimum scale
+        max_scale = 40.0  # Maximum scale to prevent overly large rooms
+        min_scale = 15.0  # Minimum scale to ensure readability
+        scale = max(min_scale, min(scale, max_scale))
+
+        # Scale room size based on scale factor
+        room_size = int(max(20, min(80, scale * 0.8)))  # Adaptive room size
 
         # Create heatmap colormap for Q-values
         def get_q_color(q_value, min_val=-10, max_val=10):
@@ -1377,18 +1500,32 @@ class MDPVisualizer:
         # Room size for display
         room_size = int(ROOM_SIZE * scale * 1.2)
 
-        # Create fonts
+        # Create fonts - make room labels smaller for large graphs, but keep UI fonts normal
+        num_states = len(self.room_coords)
+        if num_states > 30:  # Large graph like complex_maze
+            room_font_size = 8  # Small font for room labels only
+        else:  # Small/medium graphs
+            room_font_size = 26  # Normal size for room labels
+
+        # UI fonts always stay normal size for readability
+        ui_font_size = 26
+        ui_small_font_size = 20
+        ui_tiny_font_size = 16
+        button_font_size = 18
+
         try:
-            font = pygame.font.SysFont("Arial", 26)
-            small_font = pygame.font.SysFont("Arial", 20)
-            tiny_font = pygame.font.SysFont("Arial", 16)
-            button_font = pygame.font.SysFont("Arial", 18, bold=True)
+            room_font = pygame.font.SysFont("Arial", room_font_size)  # For room labels
+            font = pygame.font.SysFont("Arial", ui_font_size)  # For main UI text
+            small_font = pygame.font.SysFont("Arial", ui_small_font_size)  # For secondary UI text
+            tiny_font = pygame.font.SysFont("Arial", ui_tiny_font_size)  # For Q-values
+            button_font = pygame.font.SysFont("Arial", button_font_size, bold=True)
         except:
             # Fallback to default fonts
-            font = pygame.font.SysFont(None, 26)
-            small_font = pygame.font.SysFont(None, 20)
-            tiny_font = pygame.font.SysFont(None, 16)
-            button_font = pygame.font.SysFont(None, 18)
+            room_font = pygame.font.SysFont(None, room_font_size)
+            font = pygame.font.SysFont(None, ui_font_size)
+            small_font = pygame.font.SysFont(None, ui_small_font_size)
+            tiny_font = pygame.font.SysFont(None, ui_tiny_font_size)
+            button_font = pygame.font.SysFont(None, button_font_size)
 
         # Reset button (moved down to avoid text overlap)
         reset_button = Button(40, 220, 120, 36, "New Episode")
@@ -1693,39 +1830,6 @@ class MDPVisualizer:
                             pos2 = room_positions[neighbor]
                             pygame.draw.line(screen, pygame.Color(COLORS['wall']), pos1, pos2, 1)
 
-            # Draw Q-values on edges if available
-            for state, actions in q_values.items():
-                # Only show Q-values for explored states
-                if state in explored_states:
-                    from_pos = room_positions[state]
-                    total_actions = len(actions)
-
-                    for action_str, q_val in actions.items():
-                        action_idx = int(action_str)
-                        if action_idx < len(adj[state]):
-                            target = adj[state][action_idx]
-                            # Only show Q-values to explored targets
-                            if target in explored_states:
-                                to_pos = room_positions[target]
-
-                                # Get position for Q-value display (simplified)
-                                dx = to_pos[0] - from_pos[0]
-                                dy = to_pos[1] - from_pos[1]
-                                label_pos = (int(from_pos[0] + dx * 0.25), int(from_pos[1] + dy * 0.25))
-
-                                # Draw background with Q-value heatmap color
-                                q_text = tiny_font.render(f"{q_val:.2f}", True, pygame.Color('#000000'))
-                                text_width, text_height = q_text.get_width() + 6, q_text.get_height() + 4
-
-                                # Create surface with alpha support
-                                text_bg = pygame.Surface((text_width, text_height), pygame.SRCALPHA)
-                                bg_color = get_q_color(q_val)
-                                pygame.draw.rect(text_bg, bg_color, (0, 0, text_width, text_height), border_radius=5)
-
-                                # Blit background and text
-                                screen.blit(text_bg, (label_pos[0] - 3, label_pos[1] - 2))
-                                screen.blit(q_text, label_pos)
-
             # Draw rooms
             for room, pos in room_positions.items():
                 # For fog of war: only draw rooms that have been explored or are neighbors of explored rooms
@@ -1744,7 +1848,14 @@ class MDPVisualizer:
 
                 # Choose room color based on terminal state, current position, and exploration
                 if current_state and room == current_state:
-                    color = pygame.Color('#ffcc00')  # Highlight current room
+                    # If current state is a terminal state, use terminal color; otherwise use yellow highlight
+                    if room in terminal_rewards:
+                        if terminal_rewards[room] > 0:
+                            color = pygame.Color(COLORS['goal'])  # Green for positive terminal
+                        else:
+                            color = pygame.Color(COLORS['pit'])   # Red for negative terminal
+                    else:
+                        color = pygame.Color('#ffcc00')  # Yellow highlight for non-terminal current room
                 elif room in terminal_rewards and is_explored:
                     # Only show terminal state colors for explored rooms
                     if terminal_rewards[room] > 0:
@@ -1792,7 +1903,7 @@ class MDPVisualizer:
                 if room in terminal_rewards and is_explored:
                     label += f"\n{terminal_rewards[room]}"
 
-                text = font.render(label, True, label_color)
+                text = room_font.render(label, True, label_color)
                 screen.blit(text, (pos[0] - text.get_width()//2, pos[1] - text.get_height()//2))
 
             # Draw path taken
@@ -1939,10 +2050,37 @@ class MDPVisualizer:
                     True, action_color)
                 screen.blit(action_text, (40, 160))
 
+            # Additional agent exploration metadata
+            steps_taken = len(path) - 1  # -1 because path includes starting position
+            exploration_percent = (len(explored_states) / len(adj)) * 100
+
+            # Calculate average Q-value for current state
+            current_q_avg = 0
+            if current_state in q_values and q_values[current_state]:
+                current_q_avg = sum(q_values[current_state].values()) / len(q_values[current_state])
+
+            # Calculate best reward achieved so far
+            best_reward = max([reward for _, reward in episode_rewards]) if episode_rewards else 0.0
+
+            # Additional metadata
+            steps_text = small_font.render(f"Steps This Episode: {steps_taken}", True, pygame.Color(COLORS['text']))
+            screen.blit(steps_text, (320, 70))
+
+            exploration_text = small_font.render(f"States Explored: {len(explored_states)}/{len(adj)} ({exploration_percent:.1f}%)", True, pygame.Color(COLORS['text']))
+            screen.blit(exploration_text, (320, 100))
+
+            q_avg_text = small_font.render(f"Avg Q-value (current state): {current_q_avg:.3f}", True, pygame.Color(COLORS['text']))
+            screen.blit(q_avg_text, (320, 130))
+
+            # Display best reward with color coding in third column
+            best_color = pygame.Color('#28a745') if best_reward > 0 else pygame.Color('#dc3545') if best_reward < 0 else pygame.Color(COLORS['text'])
+            best_reward_text = small_font.render(f"Best Reward: {best_reward:.2f}", True, best_color)
+            screen.blit(best_reward_text, (620, 70))
+
             # Game parameters (combined into one line)
-            stoch_probs = {0: "1.0/0.0/0.0", 1: "4/6,1/6,1/6", 2: "2/6,2/6,2/6"}[stochasticity]
+            stoch_probs = {0: "1.0", 1: "0.8", 2: "0.5"}[stochasticity]
             params_text = tiny_font.render(
-                f"Parameters: γ={gamma}, step_cost={step_cost}, stochasticity={stochasticity} ({stoch_probs}), terminal rewards vary by graph",
+                f"Parameters: γ={gamma}, step_cost={step_cost}, Prob(intended move): {stoch_probs} (stoch = {stochasticity})",
                 True, pygame.Color('#666666'))
             screen.blit(params_text, (40, 190))
 

@@ -64,7 +64,7 @@ def create_simple_grid():
         "N10": ["N7", "N9"],
 
     }
-    terminal_rewards = {"N4": 1.0, "N7": -1.0}
+    terminal_rewards = {"N4": 10.0, "N7": -10.0}
 
     room_coords = {
         "S": (0, 0),
@@ -83,51 +83,227 @@ def create_simple_grid():
     return adj, terminal_rewards, room_coords
 
 def create_complex_maze():
-    """Create a more complex maze-like structure"""
-    adj = {
-        "S": ["A"],                          # Start
-        "A": ["S", "B", "C"],               # First junction
-        "B": ["A", "D"],                    # Upper path
-        "C": ["A", "E", "F"],               # Lower path branch
-        "D": ["B", "G", "H"],               # Upper junction
-        "E": ["C", "I"],                    # Lower branch
-        "F": ["C", "J"],                    # Alternative lower path
-        "G": ["D", "K"],                    # Path to reward
-        "H": ["D", "L"],                    # Path to danger
-        "I": ["E", "M"],                    # Lower maze part
-        "J": ["F", "N"],                    # Alternative lower route
-        "K": ["G", "GOAL"],                 # Near goal
-        "L": ["H", "TRAP1"],                # Near trap
-        "M": ["I", "TRAP2"],                # Lower trap
-        "N": ["J", "GOAL"],                 # Alternative to goal
-        "GOAL": ["K", "N"],                 # Victory!
-        "TRAP1": ["L"],                     # Dead end trap
-        "TRAP2": ["M"],                     # Another trap
-    }
-    terminal_rewards = {"GOAL": 15.0, "TRAP1": -8.0, "TRAP2": -6.0}
+    """Create a complex grid-based maze matching the 20x23 layout"""
 
-    room_coords = {
-        "S": (0, 3),
-        "A": (1, 3),
-        "B": (2, 4),
-        "C": (2, 2),
-        "D": (3, 4),
-        "E": (3, 1),
-        "F": (3, 2),
-        "G": (4, 4),
-        "H": (4, 3),
-        "I": (4, 1),
-        "J": (4, 2),
-        "K": (5, 4),
-        "L": (5, 3),
-        "M": (5, 1),
-        "N": (5, 2),
-        "GOAL": (6, 3),
-        "TRAP1": (6, 4),
-        "TRAP2": (6, 1)
+    rows = 20
+    cols = 23
+
+    # Define the obstacles (walls) - these are the gray areas in the image
+    obstacles = set()
+
+    # Top border walls
+    for c in range(cols):
+        obstacles.add((0, c))
+
+    # Bottom border walls
+    for c in range(cols):
+        obstacles.add((rows-1, c))
+
+    # Left border walls
+    for r in range(rows):
+        obstacles.add((r, 0))
+
+    # Right border walls
+    for r in range(rows):
+        obstacles.add((r, cols-1))
+
+    # Row #2
+    for c in range(cols):
+        obstacles.add((2, c))
+    obstacles.remove((2, 1))
+    obstacles.remove((2, 21))
+
+    # Row #4
+    for c in range(cols):
+        obstacles.add((4, c))
+    obstacles.remove((4, 1))
+    obstacles.remove((4, 3))
+
+    # Column #2
+    for r in range(rows):
+        obstacles.add((r, 2))
+    obstacles.remove((1, 2))
+    obstacles.remove((18, 2))
+
+    # Row #17
+    for c in range(cols):
+        obstacles.add((17, c))
+    obstacles.remove((17, 1))
+    obstacles.remove((17, 21))
+
+    # Row #5
+    obstacles.add((5, 10))
+
+    # Row #6
+    obstacles.add((6, 5))
+    obstacles.add((6, 6))
+    obstacles.add((6, 7))
+    obstacles.add((6, 17))
+    obstacles.add((6, 18))
+    obstacles.add((6, 19))
+
+    # Row #7
+    for c in range(10, 18):
+        obstacles.add((7, c))
+
+    # Row #8
+    obstacles.add((8, 10))
+    obstacles.add((8, 16))
+    obstacles.add((8, 17))
+
+    # Row #9
+    obstacles.add((9, 10))
+    obstacles.add((9, 16))
+    obstacles.add((9, 17))
+    obstacles.add((9, 18))
+    obstacles.add((9, 20))
+    obstacles.add((9, 21))
+
+    # Row #10
+    obstacles.add((10, 6))
+    obstacles.add((10, 7))
+    obstacles.add((10, 8))
+    obstacles.add((10, 9))
+    obstacles.add((10, 10))
+    obstacles.add((10, 16))
+
+    # Row #11
+    obstacles.add((11, 4))
+    obstacles.add((11, 12))
+    obstacles.add((11, 16))
+
+    # Row #12
+    obstacles.add((12, 4))
+    obstacles.add((12, 12))
+    obstacles.add((12, 14))
+    obstacles.add((12, 16))
+    obstacles.add((12, 17))
+    obstacles.add((12, 18))
+    obstacles.add((12, 19))
+    obstacles.add((12, 20))
+
+    # Row #13
+    obstacles.add((13, 4))
+    obstacles.add((13, 5))
+    obstacles.add((13, 7))
+    obstacles.add((13, 12))
+    obstacles.add((13, 16))
+
+    # Row #14
+    obstacles.add((14, 7))
+    obstacles.add((14, 12))
+    obstacles.add((14, 16))
+
+    # Row #15
+    obstacles.add((15, 3))
+    obstacles.add((15, 4))
+    obstacles.add((15, 5))
+    obstacles.add((15, 7))
+    obstacles.add((15, 8))
+    obstacles.add((15, 9))
+    obstacles.add((15, 10))
+    obstacles.add((15, 11))
+    obstacles.add((15, 12))
+    obstacles.add((15, 19))
+    obstacles.add((15, 20))
+    obstacles.add((15, 21))
+
+    # Row #16
+    obstacles.add((16, 11))
+
+    # Terminal states with rewards
+    terminal_rewards = {
+        (16, 17): +1000,
+        (6, 16): -5,
+        (8, 21): -5,
+        (10, 17): -8,
+        (13, 17): -12,
+        (9, 6): -6,
+        (7, 8): -20,
+        (8, 8): -10,
+        (11, 10): -10,
+        (12, 8): -20,
+        (13, 11): -5,
+        (14, 10): -20,
+        (10, 12): -10,
+        (10, 13): -20,
+        (10, 14): -15,
+        (9, 14): -20,
+        (12, 15): -20,
+        (14, 13): -10,
+        (15, 15): -8
     }
 
-    return adj, terminal_rewards, room_coords
+    # Generate all valid states (non-obstacle cells)
+    valid_states = set()
+    for r in range(rows):
+        for c in range(cols):
+            if (r, c) not in obstacles:
+                valid_states.add((r, c))
+
+    # Build adjacency list - 4-directional movement (up, down, left, right)
+    adj = {}
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right
+
+    for state in valid_states:
+        r, c = state
+        neighbors = []
+
+        for dr, dc in directions:
+            new_r, new_c = r + dr, c + dc
+            new_state = (new_r, new_c)
+
+            # Check if the new state is valid (in bounds and not an obstacle)
+            if (0 <= new_r < rows and 0 <= new_c < cols and
+                new_state in valid_states):
+                neighbors.append(new_state)
+
+        adj[state] = neighbors
+
+    # Set start state to (16, 3) as requested
+    start_state = (16, 3) if (16, 3) in valid_states else (1, 1)
+
+    # Convert to string keys for compatibility with existing system
+    # But use meaningful names that show coordinates
+    adj_str = {}
+    terminal_rewards_str = {}
+    room_coords = {}
+
+    # Special handling for start state and goal state
+    start_key = "S"
+    goal_key = "GOAL"
+
+    for state in valid_states:
+        r, c = state
+        if state == start_state:
+            key = "S"
+        elif state == (16, 17):  # The positive terminal
+            key = "GOAL"
+        else:
+            key = f"({r},{c})"
+
+        # Convert neighbors to string keys
+        neighbors_str = []
+        for neighbor in adj[state]:
+            nr, nc = neighbor
+            if neighbor == start_state:
+                neighbor_key = "S"
+            elif neighbor == (16, 17):
+                neighbor_key = "GOAL"
+            else:
+                neighbor_key = f"({nr},{nc})"
+            neighbors_str.append(neighbor_key)
+
+        adj_str[key] = neighbors_str
+
+        # Set coordinates for visualization (flip y for matplotlib)
+        room_coords[key] = (c, rows - 1 - r)  # x=col, y=flipped_row
+
+        # Add terminal rewards if this state has them
+        if state in terminal_rewards:
+            terminal_rewards_str[key] = terminal_rewards[state]
+
+    return adj_str, terminal_rewards_str, room_coords
 
 def get_graph(graph_type="custom_rooms"):
     """
@@ -156,7 +332,7 @@ def list_available_graphs():
     descriptions = {
         "custom_rooms": "Original room layout with goal (+10) and pit (-10)",
         "simple_grid": "Simple 3x3 grid with goal (+5) and trap (-5)",
-        "complex_maze": "Complex maze with goal (+15) and multiple traps (-8, -6)"
+        "complex_maze": "Complex maze with goal (+100) and multiple traps (-5 to -12)"
     }
 
     print("Available graph types:")

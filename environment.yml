@@ -1,4 +1,4 @@
-name: cs3600-mdp
+name: cs3600-q-learning
 channels:
   - conda-forge
   - defaults
