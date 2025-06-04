@@ -831,7 +831,11 @@ def create_static_visualization(data_file, output_dir, room_coords=None, graph_t
     return output_file, history_file
 
 def run_experiments(graph_type="custom_rooms"):
-    """Run multiple experiments with different parameter settings for a specific graph type"""
+    """Run multiple experiments with different parameter settings for a specific graph type
+
+    Command line to run all experiments:
+    >>> python q_learning.py --run-experiments --graph-type complex_maze
+    """
     # Create directory structure organized by graph type
     base_dir = "q_learning_experiments"
     graph_dir = os.path.join(base_dir, graph_type)
@@ -841,6 +845,8 @@ def run_experiments(graph_type="custom_rooms"):
     base_configs = [
         # No step cost
         {"step_cost": 0, "gamma": 0.99, "epsilon": 0.1, "epsilon_decay": 1.0, "epsilon_min": 0.1, "alpha": 0.1, "alpha_decay_rate": 0.002, "optimistic_init": 0.0},
+        {"step_cost": 0, "gamma": 0.99, "epsilon": 0.0, "epsilon_decay": 1.0, "epsilon_min": 0.0, "alpha": 0.1, "alpha_decay_rate": 0.002, "optimistic_init": 0.0},
+        {"step_cost": 0, "gamma": 0.99, "epsilon": 0.5, "epsilon_decay": 1.0, "epsilon_min": 0.5, "alpha": 0.1, "alpha_decay_rate": 0.002, "optimistic_init": 0.0},
 
         # Step cost = -1
         # Constant epsilon
@@ -1161,5 +1167,14 @@ def main():
     # Create static visualization
     create_static_visualization(data_file, 'visualizations', room_coords, args.graph_type)
 
+def run_q_learning_experiment_in_debug_mode(graph_type="custom_rooms"):
+    """Run a single Q-learning experiment in debug mode"""
+    adj, terminal_rewards, room_coords = get_graph(graph_type)
+    env = RoomEnvironment(adj, terminal_rewards, step_cost=0, stochasticity=0)
+    agent = QLearningAgent(env, adj, epsilon=0.3, alpha=0.5, gamma=0.9)
+    agent.train(num_episodes=10)
+    display_policy(agent, adj, terminal_rewards)
+
 if __name__ == "__main__":
+    run_q_learning_experiment_in_debug_mode("complex_maze")
     main()
