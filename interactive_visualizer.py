@@ -6,6 +6,7 @@ Usage:
     python interactive_visualizer.py                      # Interactive visualization
     python interactive_visualizer.py --static-step 100    # Static visualization every 100 episodes
     python interactive_visualizer.py --experiments        # Load multiple experiments from q_learning_experiments
+    python interactive_visualizer.py --experiments --experiments-graph complex_maze
     python interactive_visualizer.py --episode-skip 10    # Skip episodes, showing only every 10th episode
     python interactive_visualizer.py --experiments --episode-skip 50  # Load multiple experiments and skip every 50 episodes
     python interactive_visualizer.py --human-play         # Play the game manually by selecting actions
@@ -535,7 +536,7 @@ class MDPVisualizer:
         speed = speed_values[speed_index]
         frame_counter = 0
         show_policy = False
-        show_values = True
+        show_values = False
         show_path = True
 
         # Episode skip options and current setting
@@ -794,13 +795,26 @@ class MDPVisualizer:
 
         # Simulate Q-value progression based on episode number
         def get_q_values_at_episode(episode_idx):
-            # Simple linear interpolation from 0 to final Q-values
+            # Better simulation of Q-value learning progression using sigmoid curve
             progress = min(1.0, (episode_idx + 1) / len(self.episodes))
+
+            # Use sigmoidal learning curve for more realistic progression
+            import math
+            sigmoid_progress = 1 / (1 + math.exp(-8 * (progress - 0.5)))
+
             simulated_q_values = {}
             for state, actions in self.q_values.items():
                 simulated_q_values[state] = {}
                 for action, final_value in actions.items():
-                    simulated_q_values[state][action] = final_value * progress
+                    # Start from optimistic initialization if available
+                    initial_value = 0.0
+                    if hasattr(self, 'data') and self.data and 'agent' in self.data:
+                        initial_value = self.data['agent'].get('optimistic_init', 0.0)
+
+                    # Interpolate from initial to final using sigmoid curve
+                    current_value = initial_value + (final_value - initial_value) * sigmoid_progress
+                    simulated_q_values[state][action] = current_value
+
             return simulated_q_values
 
         # Get policy at a given episode
@@ -841,12 +855,16 @@ class MDPVisualizer:
 
                 # Add a perpendicular offset based on action index for multiple actions
                 if total_actions > 1:
+                    # Adaptive offset based on graph size
+                    num_states = len(room_positions)
+                    base_offset = 15 if num_states <= 30 else 8  # Smaller offset for large graphs
+
                     # Perpendicular vector
-                    perp_dx = -dy / length * 15
-                    perp_dy = dx / length * 15
+                    perp_dx = -dy / length * base_offset
+                    perp_dy = dx / length * base_offset
 
                     # Offset based on action index
-                    offset = (action_idx - (total_actions - 1) / 2) * 1.2
+                    offset = (action_idx - (total_actions - 1) / 2) * 0.8  # Reduced multiplier
                     pos_x += perp_dx * offset
                     pos_y += perp_dy * offset
 
@@ -1119,6 +1137,69 @@ class MDPVisualizer:
                                 int(end_y - head_size*dy + head_size*dx*0.5))
                             ])
 
+            # Draw Q-values if enabled
+            if show_values:
+                for state in self.adj.keys():
+                    if state in current_q_values and state in room_positions:
+                        state_pos = room_positions[state]
+
+                        # Get available actions for this state
+                        if state in self.adj:
+                            action_indices = list(range(len(self.adj[state])))
+                            total_actions = len(action_indices)
+
+                            for action_idx in action_indices:
+                                if action_idx < len(self.adj[state]):
+                                    target_state = self.adj[state][action_idx]
+                                    if target_state in room_positions:
+                                        target_pos = room_positions[target_state]
+
+                                        # Get Q-value for this state-action pair
+                                        q_value = current_q_values[state].get(str(action_idx), 0.0)
+
+                                        # Calculate position for Q-value display
+                                        q_pos = get_edge_q_position(state_pos, target_pos, action_idx, total_actions)
+
+                                        # Color-code Q-value based on its value
+                                        q_color_rgba = get_q_color(q_value, min_val=-10, max_val=10)
+                                        q_color = pygame.Color(q_color_rgba[0], q_color_rgba[1], q_color_rgba[2])
+
+                                        # Adaptive Q-value display based on graph size
+                                        num_states = len(room_positions)
+                                        if num_states > 100:  # Large graphs like complex_maze
+                                            base_radius = 8
+                                            text_format = f"{q_value:.1f}"  # Shorter format
+                                        elif num_states > 30:  # Medium graphs
+                                            base_radius = 10
+                                            text_format = f"{q_value:.1f}"
+                                        else:  # Small graphs
+                                            base_radius = 12
+                                            text_format = f"{q_value:.2f}"
+
+                                        # Create background for Q-value text with adaptive formatting
+                                        q_text = text_format
+                                        text_surface = tiny_font.render(q_text, True, pygame.Color('#000000'))
+                                        text_rect = text_surface.get_rect(center=q_pos)
+
+                                        # Much smaller, fixed-size circle
+                                        bg_radius = base_radius
+                                        try:
+                                            # Create a surface with alpha for the background
+                                            bg_surface = pygame.Surface((bg_radius * 2, bg_radius * 2), pygame.SRCALPHA)
+                                            bg_surface.fill((*q_color_rgba[:3], 180))  # Semi-transparent background
+                                            bg_rect = bg_surface.get_rect(center=q_pos)
+                                            screen.blit(bg_surface, bg_rect)
+
+                                            # Draw border around the background
+                                            pygame.draw.circle(screen, pygame.Color('#333333'), q_pos, bg_radius, 1)
+                                        except:
+                                            # Fallback for older pygame versions
+                                            pygame.draw.circle(screen, q_color, q_pos, bg_radius)
+                                            pygame.draw.circle(screen, pygame.Color('#333333'), q_pos, bg_radius, 1)
+
+                                        # Draw the Q-value text
+                                        screen.blit(text_surface, text_rect)
+
             # Draw path up to current step with improved visibility
             if show_path and steps and step_index > 0:
                 # Extract path data
@@ -1226,6 +1307,28 @@ class MDPVisualizer:
                         True, pygame.Color('#000000'))
                     screen.blit(action_text, (40, 105 + y_offset))
 
+            # Display current state Q-values if Q-values are shown
+            if show_values and steps and step_index < len(steps):
+                current_step = min(step_index, len(steps)-1)
+                step_data = steps[current_step]
+                current_state_in_step = step_data['state']
+
+                if current_state_in_step in current_q_values and current_q_values[current_state_in_step]:
+                    # Build Q-values text for current state
+                    q_vals = current_q_values[current_state_in_step]
+                    if current_state_in_step in self.adj:
+                        q_text_parts = []
+                        for action_idx, neighbor in enumerate(self.adj[current_state_in_step]):
+                            q_val = q_vals.get(str(action_idx), 0.0)
+                            q_text_parts.append(f"{neighbor}:{q_val:.2f}")
+
+                        q_values_text = f"Q-values for {current_state_in_step}: " + ", ".join(q_text_parts)
+                        q_values_label = tiny_font.render(q_values_text, True, pygame.Color('#6a4c93'))
+                        screen.blit(q_values_label, (40, 130 + y_offset))
+
+                        # Adjust y_offset for subsequent content
+                        y_offset += 25
+
             # Additional learning progress metadata
             if len(self.experiments) > 1:
                 current_exp = self.experiments[self.current_experiment_index]
@@ -1259,42 +1362,43 @@ class MDPVisualizer:
                         performance_label = tiny_font.render(performance_text, True, pygame.Color('#28a745'))
                         screen.blit(performance_label, (350, 130 + y_offset))
 
-            # Show legend for Q-value colors with standard colormap
-            legend_width = 150
-            legend_height = 20
-            legend_x = screen_width - legend_width - 30  # Position from right edge
-            legend_y = screen_height - 50
+            # Show legend for Q-value colors with standard colormap (only when Q-values are displayed)
+            if show_values:
+                legend_width = 150
+                legend_height = 20
+                legend_x = screen_width - legend_width - 30  # Position from right edge
+                legend_y = screen_height - 50
 
-            # Draw legend background
-            legend_bg = pygame.Surface((legend_width + 100, 50))
-            legend_bg.fill(pygame.Color('#f8f9fa'))
-            legend_bg.set_alpha(220)
-            screen.blit(legend_bg, (legend_x - 10, legend_y - 10))
+                # Draw legend background
+                legend_bg = pygame.Surface((legend_width + 100, 50))
+                legend_bg.fill(pygame.Color('#f8f9fa'))
+                legend_bg.set_alpha(220)
+                screen.blit(legend_bg, (legend_x - 10, legend_y - 10))
 
-            # Draw legend gradient using colormap
-            cmap = cm.get_cmap('RdYlGn')
-            for i in range(legend_width):
-                normalized = i / legend_width
-                rgba = cmap(normalized)
-                r, g, b = int(rgba[0]*255), int(rgba[1]*255), int(rgba[2]*255)
+                # Draw legend gradient using colormap
+                cmap = cm.get_cmap('RdYlGn')
+                for i in range(legend_width):
+                    normalized = i / legend_width
+                    rgba = cmap(normalized)
+                    r, g, b = int(rgba[0]*255), int(rgba[1]*255), int(rgba[2]*255)
 
-                # Create a surface for each line segment
-                line_surface = pygame.Surface((1, legend_height), pygame.SRCALPHA)
-                line_surface.fill((r, g, b, 220))
-                screen.blit(line_surface, (legend_x + i, legend_y))
+                    # Create a surface for each line segment
+                    line_surface = pygame.Surface((1, legend_height), pygame.SRCALPHA)
+                    line_surface.fill((r, g, b, 220))
+                    screen.blit(line_surface, (legend_x + i, legend_y))
 
-            # Add labels
-            neg_label = tiny_font.render("-10", True, pygame.Color('#000000'))
-            screen.blit(neg_label, (legend_x, legend_y + legend_height + 5))
+                # Add labels
+                neg_label = tiny_font.render("-10", True, pygame.Color('#000000'))
+                screen.blit(neg_label, (legend_x, legend_y + legend_height + 5))
 
-            zero_label = tiny_font.render("0", True, pygame.Color('#000000'))
-            screen.blit(zero_label, (legend_x + legend_width//2, legend_y + legend_height + 5))
+                zero_label = tiny_font.render("0", True, pygame.Color('#000000'))
+                screen.blit(zero_label, (legend_x + legend_width//2, legend_y + legend_height + 5))
 
-            pos_label = tiny_font.render("+10", True, pygame.Color('#000000'))
-            screen.blit(pos_label, (legend_x + legend_width - 20, legend_y + legend_height + 5))
+                pos_label = tiny_font.render("+10", True, pygame.Color('#000000'))
+                screen.blit(pos_label, (legend_x + legend_width - 20, legend_y + legend_height + 5))
 
-            legend_title = small_font.render("Q-Value Color Scale", True, pygame.Color('#000000'))
-            screen.blit(legend_title, (legend_x, legend_y - 25))
+                legend_title = small_font.render("Q-Value Color Scale", True, pygame.Color('#000000'))
+                screen.blit(legend_title, (legend_x, legend_y - 25))
 
             # Draw control panel background
             control_panel_bg = pygame.Surface((button_width + 20, screen_height - 150))
@@ -2167,7 +2271,7 @@ def main():
             print("  python q_learning.py --run-experiments --graph-type complex_maze")
 
         print(f"\nAlternatively, try:")
-        print(f"  python mdp_viz.py --human-play --graph-type {args.graph_type}")
+        print(f"  python interactive_visualizer.py --human-play --graph-type {args.graph_type}")
         print(f"  python q_learning.py --graph-type {args.graph_type} -n 100")
         return
 

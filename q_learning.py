@@ -1171,7 +1171,7 @@ def run_q_learning_experiment_in_debug_mode(graph_type="custom_rooms"):
     """Run a single Q-learning experiment in debug mode"""
     adj, terminal_rewards, room_coords = get_graph(graph_type)
     env = RoomEnvironment(adj, terminal_rewards, step_cost=0, stochasticity=0)
-    agent = QLearningAgent(env, adj, epsilon=0.3, alpha=0.5, gamma=0.9)
+    agent = QLearningAgent(env, adj, epsilon=0.3, alpha=0.1, gamma=0.9)
     agent.train(num_episodes=10)
     display_policy(agent, adj, terminal_rewards)
 

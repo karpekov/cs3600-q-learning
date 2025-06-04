@@ -1,70 +1,63 @@
-# MDP Q-Learning Visualization
+# MDP Q-Learning Room Explorer
 
-A Q-learning implementation for Markov Decision Processes with interactive visualization, designed for educational purposes in CS3600.
-
-## Overview
-
-This project provides:
-- Q-learning algorithm implementation for different graph environments
-- Interactive visualization of learning progress
-- Human play mode for manual exploration
-- Multiple graph types (custom rooms, simple grid, complex maze)
-- Comprehensive experiment running and comparison
+This project implements Q-learning for exploring room environments with different graph structures and stochasticity levels.
 
 ## Quick Start
 
-### Basic Training
-```bash
-python q_learning.py                    # Train with default settings
-python q_learning.py -n 1000 -s 1      # 1000 episodes, moderate stochasticity
-```
+1. **Install dependencies:**
+   ```bash
+   conda env create -f environment.yml
+   conda activate cs3600-q-learning
+   ```
 
-### Visualization
-```bash
-python mdp_viz.py                       # Interactive visualization
-python mdp_viz.py --human-play          # Play manually
-```
+2. **Run Q-learning experiments:**
+   ```bash
+   python q_learning.py --run-experiments --graph-type custom_rooms
+   ```
 
-### Run Experiments
-```bash
-python q_learning.py --run-experiments --graph-type custom_rooms
-python mdp_viz.py --experiments --experiments-graph custom_rooms
-```
+3. **Visualize results:**
+   ```bash
+   python interactive_visualizer.py                       # Interactive visualization
+   python interactive_visualizer.py --human-play          # Play manually
+   ```
 
-## Key Files
+## Advanced Usage
 
-- **`q_learning.py`** - Main Q-learning implementation and training
-- **`mdp_viz.py`** - Interactive visualization and human play mode
-- **`graph_definitions.py`** - Different environment definitions
-- **`run_commands.bash`** - Complete command examples
+4. **Analyze multiple experiments:**
+   ```bash
+   python interactive_visualizer.py --experiments --experiments-graph custom_rooms
+   ```
+
+## Files
+
+- **`q_learning.py`** - Main Q-learning implementation and experiment runner
+- **`interactive_visualizer.py`** - Interactive visualization and human play mode
+- **`graph_definitions.py`** - Graph structures (custom_rooms, simple_grid, complex_maze)
+- **`environment.yml`** - Conda environment specification
 
 ## Graph Types
 
-- **`custom_rooms`** - Original room layout with goal and pit
-- **`simple_grid`** - Simple 3x3 grid environment
-- **`complex_maze`** - Complex maze with multiple traps
+- `custom_rooms` - 13-state room environment with goal and pit
+- `simple_grid` - Grid-based navigation environment
+- `complex_maze` - Large maze environment (400+ states)
 
-## Parameters
+## Controls
 
-- `-e, --epsilon` - Exploration rate (default: 0.1)
-- `-a, --alpha` - Learning rate (default: 0.1)
-- `-g, --gamma` - Discount factor (default: 0.9)
-- `-s, --stochasticity` - Environment randomness: 0=deterministic, 1=moderate, 2=high
-- `-n, --episodes` - Number of training episodes
+Interactive mode supports episode navigation, speed control, and toggles for policy arrows, Q-values, and agent paths.
 
-## Installation
+## Experiments
 
-Requires Python 3.7+ with:
+Generated experiments are stored in `q_learning_experiments/` organized by graph type and stochasticity level.
+
+Q-learning parameters can be adjusted including epsilon (exploration), alpha (learning rate), gamma (discount), and environment stochasticity.
+
+For detailed parameter exploration, see the experiment configurations in `q_learning.py`.
+
+## Human Play Mode
+
+Experience the environment manually with:
 ```bash
-pip install pygame matplotlib numpy networkx
+python interactive_visualizer.py --human-play --graph-type custom_rooms
 ```
 
-Or use the provided conda environment:
-```bash
-conda env create -f environment.yml
-conda activate cs3600-q-learning
-```
-
-## Examples
-
-See `run_commands.bash` for comprehensive usage examples.
+Use keyboard or mouse to select actions, with real-time Q-value learning and visualization.
