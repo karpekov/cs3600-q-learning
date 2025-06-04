@@ -519,7 +519,7 @@ class MDPVisualizer:
         """Launch an interactive pygame visualization"""
         pygame.init()
         # Increase resolution for better quality
-        screen_width, screen_height = 1200, 900
+        screen_width, screen_height = 1200, 1000
         screen = pygame.display.set_mode((screen_width, screen_height))
         pygame.display.set_caption("MDP Room Explorer")
 
@@ -641,7 +641,7 @@ class MDPVisualizer:
 
         # Scale coordinates to screen
         padding = 80
-        padding_top = 240  # Increased top padding for text info
+        padding_top = 260  # Increased top padding for text info
         # Calculate bounds dynamically from room coordinates
         x_coords = [coord[0] for coord in self.room_coords.values()]
         y_coords = [coord[1] for coord in self.room_coords.values()]
@@ -1271,7 +1271,7 @@ class MDPVisualizer:
 
                 exp_metadata_text = f"ε_start={initial_epsilon:.4f}, ε_decay={exp_params['epsilon_decay']:.4f}, ε_final={exp_params['epsilon']:.4f}, " + \
                     f"α_start={exp_params['initial_alpha']:.4f}, α_final={exp_params['alpha']:.4f}, α_decay={exp_params['alpha_decay_rate']:.4f}, " + \
-                    f"γ={exp_params['gamma']}, cost={exp_params['step_cost']}, stoch={exp_params['stochasticity']}"
+                    f"γ={exp_params['gamma']}, cost={exp_params['step_cost']}, stoch={exp_params['stochasticity']}, Q_init={exp_params['optimistic_init']}"
                 exp_metadata_label = tiny_font.render(exp_metadata_text, True, pygame.Color('#666666'))
                 screen.blit(exp_metadata_label, (40, 55))
 
@@ -1431,7 +1431,7 @@ class MDPVisualizer:
     def human_play(self, override_graph_type=None):
         """Launch an interactive mode where the human can play by selecting actions"""
         pygame.init()
-        screen_width, screen_height = 1200, 900
+        screen_width, screen_height = 1200, 1000
         screen = pygame.display.set_mode((screen_width, screen_height))
         pygame.display.set_caption("MDP Room Explorer - Human Play Mode")
 
@@ -1547,7 +1547,7 @@ class MDPVisualizer:
 
         # Set up visualization parameters
         padding = 80
-        padding_top = 240  # Increased top padding for text info
+        padding_top = 260  # Increased top padding for text info
         # Calculate bounds dynamically from room coordinates
         x_coords = [coord[0] for coord in self.room_coords.values()]
         y_coords = [coord[1] for coord in self.room_coords.values()]
@@ -1631,11 +1631,11 @@ class MDPVisualizer:
             button_font = pygame.font.SysFont(None, button_font_size)
 
         # Reset button (moved down to avoid text overlap)
-        reset_button = Button(40, 220, 120, 36, "New Episode")
+        reset_button = Button(40, 220, 180, 36, "New Episode")
 
         # Stochasticity control button (moved down to avoid text overlap)
         stochasticity_labels = ["Deterministic", "Moderate", "High"]
-        stochasticity_button = Button(170, 220, 140, 36, f"Stoch: {stochasticity_labels[stochasticity]}")
+        stochasticity_button = Button(240, 220, 180, 36, f"Stoch: {stochasticity_labels[stochasticity]}")
 
         # Create action buttons
         action_buttons = []

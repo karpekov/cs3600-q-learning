@@ -5,15 +5,11 @@ channels:
 dependencies:
   - python=3.9
   - numpy
-  - pandas
   - matplotlib
   - networkx
-  - scipy
   - ipywidgets
   - jupyter
   - notebook
-  - altair
-  - nltk
   - pip
   - pip:
     - ipython

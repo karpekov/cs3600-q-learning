@@ -1,63 +1,133 @@
-# MDP Q-Learning Room Explorer
+# Q-Learning Room Explorer for CS3600
 
-This project implements Q-learning for exploring room environments with different graph structures and stochasticity levels.
+This repository provides an interactive Q-learning implementation for exploring room environments as part of the CS3600 (Introduction to Artificial Intelligence) course at Georgia Tech. It contains implementations of Q-learning algorithms with step-by-step visualization capabilities and human play modes for different graph structures and stochasticity levels.
+
+## Overview
+
+### Q-Learning Algorithm
+
+This repository includes a comprehensive implementation of the Q-learning reinforcement learning algorithm:
+
+**Q-Learning**: Model-free temporal difference learning that learns the optimal action-value function Q*(s,a) using the Bellman equation update:
+```
+Q(s,a) ← Q(s,a) + α[r + γ·max_a'Q(s',a') - Q(s,a)]
+```
+
+### Key Features
+
+- **Multiple Environment Types**: Classic 3x4 simple grid from the "Artificial Intelligence: A Modern Approach" book, and complex mazes with multiple positive and negativerewards and configurable stochasticity levels.
+- **Human Play Mode**: Allow humans to navigate and explore custom environments using pygame as if they were the agent.
+- **Comprehensive Hyperparameter Exploration**: Run multiple experiments with varying hyperparameters including epsilon (exploration), alpha (learning rate), step cost, decay rates, optimistic initialization, and more
+- **Interactive Learning Visualization**: Using pygame, visualize individual episode replays to see how agents explore environments and learn optimal policies in real-time
 
 ## Quick Start
 
-1. **Install dependencies:**
+### **1. Install dependencies (conda preferred):**
+
+   **Option A: Using conda (recommended):**
    ```bash
    conda env create -f environment.yml
    conda activate cs3600-q-learning
    ```
 
-2. **Run Q-learning experiments:**
+   **Option B: Using pip:**
    ```bash
-   python q_learning.py --run-experiments --graph-type custom_rooms
+   pip install numpy matplotlib networkx ipywidgets jupyter notebook ipython pygame tqdm
    ```
 
-3. **Visualize results:**
+
+
+### **2. Human Play Mode:**
    ```bash
-   python interactive_visualizer.py                       # Interactive visualization
-   python interactive_visualizer.py --human-play          # Play manually
+   python interactive_visualizer.py --human-play --graph-type simple_grid
+   python interactive_visualizer.py --human-play --graph-type complex_maze
+
    ```
 
-## Advanced Usage
-
-4. **Analyze multiple experiments:**
+### **3. Run single Q-learning experiment:**
    ```bash
-   python interactive_visualizer.py --experiments --experiments-graph custom_rooms
+   python q_learning.py \
+       --graph-type simple_grid \
+       --episodes 10000 \
+       --gamma 0.9 \
+       --epsilon 0.8 \
+       --epsilon-decay 0.999 \
+       --alpha 0.2 \
+       --alpha-decay-rate 0.01 \
+       --optimistic-init 100.0 \
+       --stochasticity 1
+   ```
+
+Hyperparameters:
+- `--graph-type` - Graph type
+- `--episodes` - Number of episodes
+- `--epsilon` - Exploration rate
+- `--epsilon-decay` - Exploration rate decay rate
+- `--epsilon-min` - Minimum exploration rate
+- `--alpha` - Learning rate
+- `--alpha-decay-rate` - Learning rate decay rate
+- `--optimistic-init` - Optimistic Q-value initialization
+- `--gamma` - Discount factor
+- `--cost` - Step cost
+- `--stochasticity` - Stochasticity level: 0 for deterministic, 1 for stochastic with 20% chance of moving to a random state, 2 for stochastic with 50% chance of moving to a random state
+
+The experiment results are saved in the `q_learning_experiments/` folder.
+
+### **4. Run Multiple Q-learning experiments:**
+
+To run multiple experiments, use the `--run-experiments` flag. The experiment config is defined in the `q_learning.py` file.
+
+   ```bash
+   python q_learning.py --run-experiments --graph-type simple_grid
+   python q_learning.py --run-experiments --graph-type complex_maze
+   ```
+
+The experiment results are saved in the `q_learning_experiments/` folder.
+
+### **5. Visualize Q-learning Experiments:**
+
+To instantiate the pygame visualization, run:
+
+   ```bash
+   python interactive_visualizer.py --experiments --graph-type simple_grid
+   python interactive_visualizer.py --experiments --graph-type complex_maze
    ```
 
 ## Files
 
-- **`q_learning.py`** - Main Q-learning implementation and experiment runner
-- **`interactive_visualizer.py`** - Interactive visualization and human play mode
-- **`graph_definitions.py`** - Graph structures (custom_rooms, simple_grid, complex_maze)
-- **`environment.yml`** - Conda environment specification
+- `q_learning.py` - Main Q-learning implementation and experiment runner.
+- `interactive_visualizer.py` - Interactive visualization and human play mode using pygame.
+- `graph_definitions.py` - Graph structures (simple_grid, custom_rooms, complex_maze)
+- `environment.yml` - Conda environment specification
 
 ## Graph Types
 
-- `custom_rooms` - 13-state room environment with goal and pit
 - `simple_grid` - Grid-based navigation environment
+- `custom_rooms` - 13-state room environment with goal and pit
 - `complex_maze` - Large maze environment (400+ states)
 
-## Controls
-
-Interactive mode supports episode navigation, speed control, and toggles for policy arrows, Q-values, and agent paths.
-
-## Experiments
-
-Generated experiments are stored in `q_learning_experiments/` organized by graph type and stochasticity level.
-
-Q-learning parameters can be adjusted including epsilon (exploration), alpha (learning rate), gamma (discount), and environment stochasticity.
-
-For detailed parameter exploration, see the experiment configurations in `q_learning.py`.
-
-## Human Play Mode
-
-Experience the environment manually with:
+To visualize all graphs, run:
 ```bash
-python interactive_visualizer.py --human-play --graph-type custom_rooms
+python graph_definitions.py
 ```
 
-Use keyboard or mouse to select actions, with real-time Q-value learning and visualization.
+The graphs are saved in the `graphs/` folder.
+
+
+## Debug Mode
+
+To debug the Q-learning algorithm, uncomment the following line in `q_learning.py`:
+```python
+# run_q_learning_experiment_in_debug_mode("complex_maze")
+```
+And run in debug mode within your IDE.
+
+## Author
+
+[Alexander Karpekov](https://alexkarpekov.com) is the author of this repository. He is a PhD student at Georgia Tech and created this repository to support his teaching of Q-learning algorithms in the CS3600 course.
+
+*Parts of this repository were co-developed with the assistance of AI tools, including Claude 4.0 Sonnet and Cursor. All content was reviewed and edited by the author.*
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

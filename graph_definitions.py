@@ -88,10 +88,10 @@ def create_simple_grid():
 def create_complex_maze():
     """Create a complex grid-based maze matching the 20x23 layout"""
 
+    # Definition from https://github.com/karpekov/cs3600-mdp-gridworld
     rows = 20
     cols = 23
 
-    # Define the obstacles (walls) - these are the gray areas in the image
     obstacles = set()
 
     # Top border walls
@@ -114,13 +114,13 @@ def create_complex_maze():
     for c in range(cols):
         obstacles.add((2, c))
     obstacles.remove((2, 1))
-    obstacles.remove((2, 21))
+    obstacles.remove((2, 16))
 
     # Row #4
     for c in range(cols):
         obstacles.add((4, c))
     obstacles.remove((4, 1))
-    obstacles.remove((4, 3))
+    obstacles.remove((4, 6))
 
     # Column #2
     for r in range(rows):
@@ -138,8 +138,9 @@ def create_complex_maze():
     obstacles.add((5, 10))
 
     # Row #6
+    obstacles.add((6, 3))
+    obstacles.add((6, 4))
     obstacles.add((6, 5))
-    obstacles.add((6, 6))
     obstacles.add((6, 7))
     obstacles.add((6, 17))
     obstacles.add((6, 18))
@@ -214,20 +215,23 @@ def create_complex_maze():
     # Row #16
     obstacles.add((16, 11))
 
-    # Terminal states with rewards
-    terminal_rewards = {
-        (16, 17): +1000,
+    terminals = {
+        (15, 17): +1000,
+
         (6, 16): -5,
         (8, 21): -5,
         (10, 17): -8,
         (13, 17): -12,
+
         (9, 6): -6,
         (7, 8): -20,
         (8, 8): -10,
+
         (11, 10): -10,
         (12, 8): -20,
         (13, 11): -5,
         (14, 10): -20,
+
         (10, 12): -10,
         (10, 13): -20,
         (10, 14): -15,
@@ -237,6 +241,7 @@ def create_complex_maze():
         (15, 15): -8
     }
 
+    # Convert the above definition to the one compatible with RoomEnvironment.
     # Generate all valid states (non-obstacle cells)
     valid_states = set()
     for r in range(rows):
@@ -303,8 +308,8 @@ def create_complex_maze():
         room_coords[key] = (c, rows - 1 - r)  # x=col, y=flipped_row
 
         # Add terminal rewards if this state has them
-        if state in terminal_rewards:
-            terminal_rewards_str[key] = terminal_rewards[state]
+        if state in terminals:
+            terminal_rewards_str[key] = terminals[state]
 
     return adj_str, terminal_rewards_str, room_coords
 
@@ -394,7 +399,7 @@ def viz_graph(graph_type="complex_maze"):
     output_path = os.path.join(graphs_dir, f'{graph_type}_viz.png')
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
     print(f"Graph saved as {output_path}")
-    plt.show()
+    # plt.show()
 
 if __name__ == "__main__":
     # Demo the available graphs

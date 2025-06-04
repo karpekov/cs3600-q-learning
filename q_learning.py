@@ -6,18 +6,6 @@ Q-Learning implementation for MDP room exploration
 usage:  python q_learning.py                   # uses defaults
         python q_learning.py -e 0.1 -a 0.1 -g 0.9 -n 1000  # custom parameters
         python q_learning.py --run-experiments  # run multiple parameter configurations
-        python q_learning.py --debug            # interactive debug mode for learning
-
-Temrinal Debug Mode:
-        python q_learning.py --debug
-
-        Interactive step-by-step Q-learning tutorial that shows:
-        - How Q-values are updated with the actual math
-        - Epsilon-greedy action selection (exploration vs exploitation)
-        - How the policy evolves as the agent learns
-        - Complete Q-table inspection
-
-        Perfect for students to understand Q-learning mechanics!
 """
 
 import sys
@@ -182,7 +170,7 @@ class QLearningAgent:
             reward + self.gamma * best_next_value - self.q_values[state][action]
         )
 
-    def train_episode(self, max_steps=5000, episode_num=0, total_episodes=0):
+    def train_episode(self, max_steps=1000, episode_num=0, total_episodes=0):
         state = self.env.reset()
         self.current_episode = []
         total_reward = 0
@@ -275,10 +263,16 @@ class QLearningAgent:
             else:
                 recent_mean_reward = sum(rewards) / len(rewards)
 
+            # Calculate mean episode length for past 500 episodes
+            if len(self.episode_length_history) >= 500:
+                recent_mean_length = sum(self.episode_length_history[-500:]) / 500
+            else:
+                recent_mean_length = sum(self.episode_length_history) / len(self.episode_length_history) if self.episode_length_history else 0
+
             rolling_averages.append(recent_mean_reward)
 
             # Update progress bar description with recent performance
-            pbar.set_description(f"Training | 500-ep avg: {recent_mean_reward:.3f} | ε: {self.epsilon:.3f} | α: {self.alpha:.5f}")
+            pbar.set_description(f"Training | Avg Reward: {recent_mean_reward:4.0f} | Avg Episode Length: {recent_mean_length:4.0f} | ε: {self.epsilon:.4f} | α: {self.alpha:.5f}")
 
         # Store the rolling averages for visualization
         self.intermediate_rewards = rolling_averages
@@ -339,11 +333,14 @@ class QLearningAgent:
     def save_visualization_data(self, filename="q_learning_data.json"):
         """Save data for visualization"""
         data = self.get_visualization_data()
-        os.makedirs('q_learning_data', exist_ok=True)
 
         # If filename doesn't include directory, put it in the data directory
         if '/' not in filename:
+            os.makedirs('q_learning_data', exist_ok=True)
             filename = f'q_learning_data/{filename}'
+        else:
+            # Create the directory for the specified path
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
 
         with open(filename, 'w') as f:
             json.dump(data, f, indent=2)
@@ -722,10 +719,10 @@ def create_static_visualization(data_file, output_dir, room_coords=None, graph_t
     plt.close()
 
     # Also create a reward/steps history plot
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(10, 16), dpi=150, sharex=True)
+    fig, ((ax1, ax3), (ax2, ax4)) = plt.subplots(2, 2, figsize=(16, 10), dpi=150)
     fig.patch.set_facecolor(colors['background'])
 
-    # Plot reward history
+    # Plot reward history (top left)
     episodes = range(1, len(data['total_reward_history'])+1)
 
     # Calculate moving average
@@ -739,12 +736,13 @@ def create_static_visualization(data_file, output_dir, room_coords=None, graph_t
     ax1.plot(episodes, data['total_reward_history'], alpha=0.3, color=colors['arrow'], label='Reward')
     ax1.plot(episodes, reward_moving_avg, color=colors['arrow'], linewidth=2, label='Moving Avg')
     ax1.set_ylabel('Reward', color=colors['text'])
+    ax1.set_xlabel('Episode', color=colors['text'])
     ax1.grid(True, linestyle='--', alpha=0.3)
     ax1.set_title(f'Training Progress: ε_start={initial_epsilon:.3f}, ε_decay={epsilon_decay:.5f}, ε_final={epsilon:.3f}, α_start={initial_alpha:.3f}, α_decay={alpha_decay_rate:.3f}, α_final={alpha:.3f}, γ={gamma}, step_cost={step_cost}, stochasticity={stochasticity}',
                  fontsize=12, color=colors['text'])
     ax1.legend()
 
-    # Plot episode length history
+    # Plot episode length history (bottom left)
     if window > 0:
         steps_moving_avg = [sum(data['episode_length_history'][max(0,i-window):i])/min(i,window)
                            for i in range(1, len(data['episode_length_history'])+1)]
@@ -753,11 +751,12 @@ def create_static_visualization(data_file, output_dir, room_coords=None, graph_t
 
     ax2.plot(episodes, data['episode_length_history'], alpha=0.3, color='#ff7b00', label='Steps')
     ax2.plot(episodes, steps_moving_avg, color='#ff7b00', linewidth=2, label='Moving Avg')
-    ax2.set_ylabel('Steps', color=colors['text'])
+    ax2.set_ylabel('Episode Length', color=colors['text'])
+    ax2.set_xlabel('Episode', color=colors['text'])
     ax2.grid(True, linestyle='--', alpha=0.3)
     ax2.legend()
 
-    # Plot epsilon decay history (if available)
+    # Plot epsilon decay history (top right)
     if 'epsilon_history' in data and data['epsilon_history']:
         epsilon_history = data['epsilon_history']
         ax3.plot(episodes[:len(epsilon_history)], epsilon_history, color='#28a745', linewidth=2, label='Epsilon')
@@ -786,10 +785,10 @@ def create_static_visualization(data_file, output_dir, room_coords=None, graph_t
         ax3.grid(True, linestyle='--', alpha=0.3)
         ax3.legend()
 
-    # Plot alpha decay history (if available)
+    # Plot alpha decay history (bottom right)
     if 'alpha_history' in data and data['alpha_history']:
         alpha_history = data['alpha_history']
-        ax4.plot(episodes[:len(alpha_history)], alpha_history, color='#28a745', linewidth=2, label='Alpha')
+        ax4.plot(episodes[:len(alpha_history)], alpha_history, color='#ff6b6b', linewidth=2, label='Alpha')
         ax4.set_ylabel('Alpha', color=colors['text'])
         ax4.set_xlabel('Episode', color=colors['text'])
         ax4.grid(True, linestyle='--', alpha=0.3)
@@ -809,7 +808,7 @@ def create_static_visualization(data_file, output_dir, room_coords=None, graph_t
                         fontsize=10, color=colors['text'])
     else:
         # If no alpha history, show constant alpha
-        ax4.axhline(y=alpha, color='#28a745', linewidth=2, label=f'Constant Alpha ({alpha})')
+        ax4.axhline(y=alpha, color='#ff6b6b', linewidth=2, label=f'Constant Alpha ({alpha})')
         ax4.set_ylabel('Alpha', color=colors['text'])
         ax4.set_xlabel('Episode', color=colors['text'])
         ax4.grid(True, linestyle='--', alpha=0.3)
@@ -843,18 +842,11 @@ def run_experiments(graph_type="custom_rooms"):
 
     # Base parameter combinations to try
     base_configs = [
-        # No step cost
-        {"step_cost": 0, "gamma": 0.99, "epsilon": 0.1, "epsilon_decay": 1.0, "epsilon_min": 0.1, "alpha": 0.1, "alpha_decay_rate": 0.002, "optimistic_init": 0.0},
-        {"step_cost": 0, "gamma": 0.99, "epsilon": 0.0, "epsilon_decay": 1.0, "epsilon_min": 0.0, "alpha": 0.1, "alpha_decay_rate": 0.002, "optimistic_init": 0.0},
-        {"step_cost": 0, "gamma": 0.99, "epsilon": 0.5, "epsilon_decay": 1.0, "epsilon_min": 0.5, "alpha": 0.1, "alpha_decay_rate": 0.002, "optimistic_init": 0.0},
+        # No step cost, no exploration.
+        {"step_cost": 0, "gamma": 0.999, "epsilon": 0.0, "epsilon_decay": 1.0, "epsilon_min": 0.0, "alpha": 0.1, "alpha_decay_rate": 0.002, "optimistic_init": 10.0},
 
-        # Step cost = -1
-        # Constant epsilon
-        {"step_cost": -1, "gamma": 0.99, "epsilon": 0.2, "epsilon_decay": 1.0, "epsilon_min": 0.2, "alpha": 0.1, "alpha_decay_rate": 0.002, "optimistic_init": 0.0},
-        {"step_cost": -1, "gamma": 0.99, "epsilon": 0.0, "epsilon_decay": 1.0, "epsilon_min": 0.0, "alpha": 0.1, "alpha_decay_rate": 0.002, "optimistic_init": 100.0},
-
-        # Optimistic initialization experiments for complex maze
-        {"step_cost": -1, "gamma": 0.999, "epsilon": 0.8, "epsilon_decay": 0.99995, "epsilon_min": 0.01, "alpha": 0.2, "alpha_decay_rate": 0.005, "optimistic_init": 100.0},
+        # Negative step cost, decaying exporation.
+        {"step_cost": -1, "gamma": 0.999, "epsilon": 0.8, "epsilon_decay": 0.99995, "epsilon_min": 0.01, "alpha": 0.1, "alpha_decay_rate": 0.002, "optimistic_init": 100.0},
     ]
 
     # Group experiments by stochasticity level
@@ -877,17 +869,17 @@ def run_experiments(graph_type="custom_rooms"):
         results = []
 
         for i, base_config in enumerate(base_configs):
-            print(f"\nRunning experiment {i+1}/{len(base_configs)} for {graph_type} (stochasticity={stochasticity})")
+            print(f"\nRunning experiment {i+1}/{len(base_configs)} for {graph_type}")
 
             # Create config with current stochasticity level
             config = base_config.copy()
             config["stochasticity"] = stochasticity
             config["graph_type"] = graph_type
 
-            print(f"Parameters: ε={config['epsilon']}, α={config['alpha']}, γ={config['gamma']}, step_cost={config['step_cost']}, stochasticity={config['stochasticity']}, ε_decay={config['epsilon_decay']}, ε_min={config['epsilon_min']}, α_decay={config['alpha_decay_rate']}, Q_init={config['optimistic_init']}")
+            print(f"Parameters: step_cost={config['step_cost']}, stoch={config['stochasticity']}, γ={config['gamma']}, ε={config['epsilon']}, ε_decay={config['epsilon_decay']}, ε_min={config['epsilon_min']}, α={config['alpha']}, α_decay={config['alpha_decay_rate']}, Q_init={config['optimistic_init']}")
 
             # Create experiment directory (without stochasticity in name since it's in parent folder)
-            exp_dir = os.path.join(stoch_dir, f"exp_{i+1}_e{config['epsilon']}_a{config['alpha']}_g{config['gamma']}_c{config['step_cost']}_ed{config['epsilon_decay']}_em{config['epsilon_min']}_ad{config['alpha_decay_rate']}_qi{config['optimistic_init']}")
+            exp_dir = os.path.join(stoch_dir, f"exp_{i+1}_c{config['step_cost']}_s{config['stochasticity']}_g{config['gamma']}_e{config['epsilon']}_ed{config['epsilon_decay']}_em{config['epsilon_min']}_a{config['alpha']}_ad{config['alpha_decay_rate']}_qi{config['optimistic_init']}")
             os.makedirs(exp_dir, exist_ok=True)
 
             adj, terminal_rewards, room_coords = get_graph(graph_type)
@@ -973,139 +965,6 @@ def display_policy(agent, adj, terminal_rewards):
             q_str = " ".join([f"{q_values[s][a]:.2f}" for a in available_actions])
         print(f"{s:<5} {q_str:<15}   {policy[s]}")
 
-def debug_mode():
-    """
-    Simple interactive debug mode for students to explore Q-learning step by step.
-    Shows Q-value updates, action selection, and learning process in real-time.
-    """
-    print("\n" + "="*60)
-    print("🎓 Q-LEARNING DEBUG MODE - Learn how Q-learning works!")
-    print("="*60)
-    print("This mode lets you step through Q-learning one action at a time.")
-    print("You'll see exactly how Q-values are updated and how the agent learns.\n")
-
-    # Use simple graph for learning
-    adj, terminal_rewards, room_coords = get_graph('simple_grid')
-
-    # Create environment with no step cost for simplicity
-    env = RoomEnvironment(adj, terminal_rewards, step_cost=0, stochasticity=0)  # Deterministic
-
-    # Create agent with simple parameters
-    agent = QLearningAgent(env, adj, epsilon=0.3, alpha=0.5, gamma=0.9)
-
-    episode = 1
-
-    while True:
-        print(f"\n{'='*40}")
-        print(f"Episode {episode}")
-        print(f"{'='*40}")
-
-        # Reset environment
-        state = env.reset()
-        step = 1
-        episode_reward = 0
-
-        while True:
-            # Show current state and Q-values
-            print(f"\n--- Step {step} ---")
-            print(f"Current State: {state}")
-
-            # Show available actions and their Q-values
-            actions = env.get_available_actions(state)
-            if not actions:
-                print("Terminal state reached!")
-                break
-
-            print("Available Actions and Current Q-values:")
-            for action in actions:
-                target_state = adj[state][action]
-                q_val = agent.q_values[state][action]
-                print(f"  Action {action} → {target_state}: Q = {q_val:.3f}")
-
-            # Show epsilon-greedy action selection
-            print(f"\nEpsilon = {agent.epsilon:.3f}")
-            if random.random() < agent.epsilon:
-                chosen_action = random.choice(actions)
-                print(f"🎲 EXPLORING: Randomly chose action {chosen_action}")
-            else:
-                chosen_action = agent.get_best_action(state, actions)
-                print(f"🎯 EXPLOITING: Best action is {chosen_action}")
-
-            # Wait for user input
-            input("Press Enter to take this action...")
-
-            # Take action and show what happened
-            old_q_value = agent.q_values[state][chosen_action]
-            next_state, reward, done, _ = env.step(chosen_action)
-            episode_reward += reward
-
-            print(f"\nAction taken: {chosen_action}")
-            print(f"Next state: {next_state}")
-            print(f"Reward received: {reward}")
-
-            # Show Q-value update calculation
-            next_actions = env.get_available_actions(next_state)
-            if next_actions:
-                best_next_q = max([agent.q_values[next_state][a] for a in next_actions])
-            else:
-                best_next_q = 0
-
-            target_value = reward + agent.gamma * best_next_q
-            new_q_value = old_q_value + agent.alpha * (target_value - old_q_value)
-
-            print(f"\n📊 Q-VALUE UPDATE:")
-            print(f"  Old Q({state},{chosen_action}) = {old_q_value:.3f}")
-            print(f"  Target = reward + γ × max_Q(next_state) = {reward} + {agent.gamma} × {best_next_q:.3f} = {target_value:.3f}")
-            print(f"  New Q({state},{chosen_action}) = {old_q_value:.3f} + {agent.alpha} × ({target_value:.3f} - {old_q_value:.3f}) = {new_q_value:.3f}")
-            print(f"  Change: {new_q_value - old_q_value:+.3f}")
-
-            # Apply the update
-            agent.update(state, chosen_action, reward, next_state)
-
-            state = next_state
-            step += 1
-
-            if done:
-                print(f"\n🏁 Episode {episode} finished!")
-                print(f"Total reward: {episode_reward}")
-                break
-
-        # Show current policy
-        print(f"\n📋 Current Policy (best action for each state):")
-        for s in sorted(adj.keys()):
-            if s in terminal_rewards:
-                print(f"  {s}: Terminal")
-            else:
-                best_action = agent.get_best_action(s)
-                if best_action is not None:
-                    best_target = adj[s][best_action]
-                    print(f"  {s}: Action {best_action} → {best_target}")
-
-        # Ask if user wants to continue
-        print(f"\nOptions:")
-        print(f"  1. Continue to episode {episode + 1}")
-        print(f"  2. Show full Q-table")
-        print(f"  3. Exit debug mode")
-
-        choice = input("Enter choice (1/2/3): ").strip()
-
-        if choice == "2":
-            print(f"\n📊 COMPLETE Q-TABLE:")
-            for s in sorted(adj.keys()):
-                if s not in terminal_rewards:
-                    print(f"\nState {s}:")
-                    actions = env.get_available_actions(s)
-                    for action in actions:
-                        target = adj[s][action]
-                        q_val = agent.q_values[s][action]
-                        print(f"  Q({s},{action}) → {target}: {q_val:.3f}")
-            input("\nPress Enter to continue...")
-
-        elif choice == "3":
-            print("\nExiting debug mode. Happy learning! 🎓")
-            break
-        else:
-            episode += 1
 
 def main():
     parser = argparse.ArgumentParser(description='Room Exploration using Q-learning')
@@ -1133,17 +992,11 @@ def main():
                         help=f'Graph type to use (default: custom_rooms). Choices: {AVAILABLE_GRAPHS}')
     parser.add_argument('--run-experiments', action='store_true',
                         help='Run multiple Q-learning experiments with different parameters')
-    parser.add_argument('--debug', action='store_true',
-                        help='Enter interactive debug mode to learn how Q-learning works step-by-step')
     args = parser.parse_args()
 
     if args.run_experiments:
         print("Running multiple Q-learning experiments with different parameters...")
         run_experiments(args.graph_type)
-        return
-
-    if args.debug:
-        debug_mode()
         return
 
     # Create environment and agent
@@ -1161,11 +1014,22 @@ def main():
     # Display the learned policy
     display_policy(agent, adj, terminal_rewards)
 
-    # Save data for visualization
-    data_file = agent.save_visualization_data('q_learning_data')
+    # Create experiment directory structure matching run_experiments format
+    base_dir = "q_learning_experiments"
+    graph_dir = os.path.join(base_dir, args.graph_type)
+    stoch_dir = os.path.join(graph_dir, f"s_{args.stochasticity}")
+
+    # Generate experiment name using same format as run_experiments
+    exp_name = f"single_c{args.cost}_s{args.stochasticity}_g{args.gamma}_e{args.epsilon}_ed{args.epsilon_decay}_em{args.epsilon_min}_a{args.alpha}_ad{args.alpha_decay_rate}_qi{args.optimistic_init}"
+    exp_dir = os.path.join(stoch_dir, exp_name)
+    os.makedirs(exp_dir, exist_ok=True)
+
+    # Save data for visualization in experiments directory
+    data_file = os.path.join(exp_dir, "exploration_data.json")
+    data_file = agent.save_visualization_data(data_file)
 
     # Create static visualization
-    create_static_visualization(data_file, 'visualizations', room_coords, args.graph_type)
+    create_static_visualization(data_file, exp_dir, room_coords, args.graph_type, skip_graph_subfolder=True)
 
 def run_q_learning_experiment_in_debug_mode(graph_type="custom_rooms"):
     """Run a single Q-learning experiment in debug mode"""
@@ -1176,5 +1040,5 @@ def run_q_learning_experiment_in_debug_mode(graph_type="custom_rooms"):
     display_policy(agent, adj, terminal_rewards)
 
 if __name__ == "__main__":
-    run_q_learning_experiment_in_debug_mode("complex_maze")
+    # run_q_learning_experiment_in_debug_mode("complex_maze")
     main()
