@@ -25,13 +25,13 @@ python q_learning.py --run-experiments --graph-type complex_maze
 echo
 echo "4. Visualize Experiments"
 echo "   (Interactive visualization of all experiments with nested directory support)"
-python mdp_viz.py --experiments --graph-type complex_maze
-python mdp_viz.py --experiments --graph-type complex_maze --episode-skip 50
+python interactive_visualizer.py --experiments --graph-type complex_maze
+python interactive_visualizer.py --experiments --graph-type complex_maze --episode-skip 50
 
 echo
 echo "5. Human Play Mode"
 echo "   (Play manually to understand the environment)"
-python mdp_viz.py --human-play --graph-type complex_maze
+python interactive_visualizer.py --human-play --graph-type complex_maze
 
 echo
 echo "6. 🎓 Debug Mode - Learn Q-Learning Step-by-Step"

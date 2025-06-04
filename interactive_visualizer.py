@@ -1,16 +1,15 @@
-#!/usr/bin/env python3
 """
-mdp_viz.py
+interactive_visualizer.py
 Visualization tool for the room exploration MDP results.
 
 Usage:
-    python mdp_viz.py                      # Interactive visualization
-    python mdp_viz.py --static-step 100    # Static visualization every 100 episodes
-    python mdp_viz.py --experiments        # Load multiple experiments from q_learning_experiments
-    python mdp_viz.py --episode-skip 10    # Skip episodes, showing only every 10th episode
-    python mdp_viz.py --experiments --episode-skip 50  # Load multiple experiments and skip every 50 episodes
-    python mdp_viz.py --human-play         # Play the game manually by selecting actions
-    python mdp_viz.py --human-play --graph-type complex_maze
+    python interactive_visualizer.py                      # Interactive visualization
+    python interactive_visualizer.py --static-step 100    # Static visualization every 100 episodes
+    python interactive_visualizer.py --experiments        # Load multiple experiments from q_learning_experiments
+    python interactive_visualizer.py --episode-skip 10    # Skip episodes, showing only every 10th episode
+    python interactive_visualizer.py --experiments --episode-skip 50  # Load multiple experiments and skip every 50 episodes
+    python interactive_visualizer.py --human-play         # Play the game manually by selecting actions
+    python interactive_visualizer.py --human-play --graph-type complex_maze
 """
 
 import os
