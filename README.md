@@ -47,7 +47,7 @@ Q(s,a) ← Q(s,a) + α[r + γ·max_a'Q(s',a') - Q(s,a)]
 ### **3. Run single Q-learning experiment:**
    ```bash
    python q_learning.py \
-       --graph-type simple_grid \
+       --graph-type complex_maze \
        --episodes 10000 \
        --gamma 0.9 \
        --epsilon 0.8 \
@@ -55,7 +55,7 @@ Q(s,a) ← Q(s,a) + α[r + γ·max_a'Q(s',a') - Q(s,a)]
        --alpha 0.2 \
        --alpha-decay-rate 0.01 \
        --optimistic-init 100.0 \
-       --stochasticity 1
+       --stochasticity 0
    ```
 
 Hyperparameters:
