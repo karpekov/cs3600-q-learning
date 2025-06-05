@@ -518,8 +518,8 @@ class MDPVisualizer:
     def interactive_visualization(self):
         """Launch an interactive pygame visualization"""
         pygame.init()
-        # Increase resolution for better quality
-        screen_width, screen_height = 1200, 1000
+        # Optimized resolution for smaller screens
+        screen_width, screen_height = 1000, 750
         screen = pygame.display.set_mode((screen_width, screen_height))
         pygame.display.set_caption("MDP Room Explorer")
 
@@ -641,7 +641,7 @@ class MDPVisualizer:
 
         # Scale coordinates to screen
         padding = 80
-        padding_top = 260  # Increased top padding for text info
+        padding_top = 190  # Adjusted to give grid breathing room from top and bottom
         # Calculate bounds dynamically from room coordinates
         x_coords = [coord[0] for coord in self.room_coords.values()]
         y_coords = [coord[1] for coord in self.room_coords.values()]
@@ -701,12 +701,12 @@ class MDPVisualizer:
             button_font = pygame.font.SysFont(None, button_font_size)
 
         # Create UI buttons
-        button_width = 120
-        button_height = 36
-        button_margin = 10
+        button_width = 100
+        button_height = 30
+        button_margin = 8
 
         # Control panel at top right
-        control_panel_x = screen_width - 140
+        control_panel_x = screen_width - 120
         control_panel_y = 20
         button_x = control_panel_x
         button_y = control_panel_y
@@ -1246,10 +1246,10 @@ class MDPVisualizer:
 
             # Draw UI elements with better styling
             # Create background panel for UI elements with more height to accommodate new metadata
-            ui_bg = pygame.Surface((screen_width - 340, 180))
+            ui_bg = pygame.Surface((screen_width, 160))
             ui_bg.fill(pygame.Color('#f8f9fa'))
             ui_bg.set_alpha(230)
-            screen.blit(ui_bg, (20, 20))
+            screen.blit(ui_bg, (0, 0))
 
             # Current experiment info if multiple experiments loaded
             if len(self.experiments) > 1:
@@ -1269,21 +1269,9 @@ class MDPVisualizer:
                 exp_label = small_font.render(exp_text, True, pygame.Color('#000000'))
                 screen.blit(exp_label, (40, 30))
 
-                exp_metadata_text = f"ε_start={initial_epsilon:.4f}, ε_decay={exp_params['epsilon_decay']:.4f}, ε_final={exp_params['epsilon']:.4f}, " + \
-                    f"α_start={exp_params['initial_alpha']:.4f}, α_final={exp_params['alpha']:.4f}, α_decay={exp_params['alpha_decay_rate']:.4f}, " + \
-                    f"γ={exp_params['gamma']}, cost={exp_params['step_cost']}, stoch={exp_params['stochasticity']}, Q_init={exp_params['optimistic_init']}"
-                exp_metadata_label = tiny_font.render(exp_metadata_text, True, pygame.Color('#666666'))
-                screen.blit(exp_metadata_label, (40, 55))
 
-                # Data storage and replay info
-                data_info_text = f"Total training: {total_episodes:,} episodes | Every {store_every}th episode stored | {detailed_episodes} episodes stored"
-                if hasattr(current_exp, "stochasticity_level") and current_exp.get("stochasticity_level"):
-                    data_info_text += f", Stoch Level: {current_exp['stochasticity_level']}"
 
-                data_info_label = tiny_font.render(data_info_text, True, pygame.Color('#666666'))
-                screen.blit(data_info_label, (40, 75))
-
-                y_offset = 65
+                y_offset = 25
             else:
                 y_offset = 0
 
@@ -1299,13 +1287,7 @@ class MDPVisualizer:
                                       True, pygame.Color('#000000'))
                 screen.blit(step_text, (40, 70 + y_offset))
 
-                # Current action info
-                if current_step < len(steps) and current_step >= 0:
-                    step_data = steps[current_step]
-                    action_text = small_font.render(
-                        f"State: {step_data['state']} - Action: {step_data['action']} - Intended: {step_data['intended']} - Next: {step_data['next_state']} - Reward: {step_data['reward']:.2f}",
-                        True, pygame.Color('#000000'))
-                    screen.blit(action_text, (40, 105 + y_offset))
+
 
             # Display current state Q-values if Q-values are shown
             if show_values and steps and step_index < len(steps):
@@ -1346,7 +1328,7 @@ class MDPVisualizer:
                 # Learning progress info
                 progress_text = f"Learning Progress: ε={episode_epsilon:.3f}, α={episode_alpha:.3f}"
                 progress_label = tiny_font.render(progress_text, True, pygame.Color('#0066cc'))
-                screen.blit(progress_label, (40, 130 + y_offset))
+                screen.blit(progress_label, (40, 100 + y_offset))
 
                 # Performance context
                 if hasattr(exp_data, 'total_reward_history') or 'total_reward_history' in exp_data:
@@ -1360,17 +1342,17 @@ class MDPVisualizer:
 
                         performance_text = f"Performance Context: Avg reward (±50 episodes): {avg_reward:.2f}"
                         performance_label = tiny_font.render(performance_text, True, pygame.Color('#28a745'))
-                        screen.blit(performance_label, (350, 130 + y_offset))
+                        screen.blit(performance_label, (350, 100 + y_offset))
 
             # Show legend for Q-value colors with standard colormap (only when Q-values are displayed)
             if show_values:
-                legend_width = 150
-                legend_height = 20
-                legend_x = screen_width - legend_width - 30  # Position from right edge
-                legend_y = screen_height - 50
+                legend_width = 120
+                legend_height = 16
+                legend_x = screen_width - legend_width - 25  # Position from right edge
+                legend_y = screen_height - 40
 
                 # Draw legend background
-                legend_bg = pygame.Surface((legend_width + 100, 50))
+                legend_bg = pygame.Surface((legend_width + 80, 40))
                 legend_bg.fill(pygame.Color('#f8f9fa'))
                 legend_bg.set_alpha(220)
                 screen.blit(legend_bg, (legend_x - 10, legend_y - 10))
@@ -1401,14 +1383,42 @@ class MDPVisualizer:
                 screen.blit(legend_title, (legend_x, legend_y - 25))
 
             # Draw control panel background
-            control_panel_bg = pygame.Surface((button_width + 20, screen_height - 150))
+            control_panel_bg = pygame.Surface((button_width + 16, screen_height - 120))
             control_panel_bg.fill(pygame.Color('#f8f9fa'))
             control_panel_bg.set_alpha(230)
-            screen.blit(control_panel_bg, (control_panel_x - 10, control_panel_y - 10))
+            screen.blit(control_panel_bg, (control_panel_x - 8, control_panel_y - 8))
 
             # Draw all buttons
             for button in buttons:
                 button.draw(screen, button_font)
+
+            # Draw hyperparameter info at bottom if experiments loaded
+            if len(self.experiments) > 1:
+                current_exp = self.experiments[self.current_experiment_index]
+                exp_params = current_exp["params"]
+                exp_data = current_exp["data"]
+                initial_epsilon = exp_data["agent"].get("initial_epsilon", exp_params["epsilon"])
+
+                # Get data storage info
+                data_storage = exp_data.get("data_storage", {})
+                total_episodes = data_storage.get("total_episodes", len(exp_data.get("total_reward_history", [])))
+                detailed_episodes = data_storage.get("detailed_episodes_stored", len(exp_data.get("episodes", [])))
+                store_every = data_storage.get("store_episode_details_every", 100)
+
+                # Hyperparameters at bottom
+                exp_metadata_text = f"ε_start={initial_epsilon:.4f}, ε_decay={exp_params['epsilon_decay']:.4f}, ε_final={exp_params['epsilon']:.4f}, " + \
+                    f"α_start={exp_params['initial_alpha']:.4f}, α_final={exp_params['alpha']:.4f}, α_decay={exp_params['alpha_decay_rate']:.4f}, " + \
+                    f"γ={exp_params['gamma']}, cost={exp_params['step_cost']}, stoch={exp_params['stochasticity']}, Q_init={exp_params['optimistic_init']}"
+                exp_metadata_label = tiny_font.render(exp_metadata_text, True, pygame.Color('#666666'))
+                screen.blit(exp_metadata_label, (40, screen_height - 40))
+
+                # Data storage info at very bottom
+                data_info_text = f"Total training: {total_episodes:,} episodes | Every {store_every}th episode stored | {detailed_episodes} episodes stored"
+                if hasattr(current_exp, "stochasticity_level") and current_exp.get("stochasticity_level"):
+                    data_info_text += f", Stoch Level: {current_exp['stochasticity_level']}"
+
+                data_info_label = tiny_font.render(data_info_text, True, pygame.Color('#666666'))
+                screen.blit(data_info_label, (40, screen_height - 20))
 
             # Update display
             pygame.display.flip()
@@ -1431,7 +1441,7 @@ class MDPVisualizer:
     def human_play(self, override_graph_type=None):
         """Launch an interactive mode where the human can play by selecting actions"""
         pygame.init()
-        screen_width, screen_height = 1200, 1000
+        screen_width, screen_height = 1000, 750
         screen = pygame.display.set_mode((screen_width, screen_height))
         pygame.display.set_caption("MDP Room Explorer - Human Play Mode")
 
@@ -1547,7 +1557,7 @@ class MDPVisualizer:
 
         # Set up visualization parameters
         padding = 80
-        padding_top = 260  # Increased top padding for text info
+        padding_top = 190  # Adjusted to give grid breathing room from top and bottom
         # Calculate bounds dynamically from room coordinates
         x_coords = [coord[0] for coord in self.room_coords.values()]
         y_coords = [coord[1] for coord in self.room_coords.values()]
@@ -1610,11 +1620,11 @@ class MDPVisualizer:
         else:  # Small/medium graphs
             room_font_size = 26  # Normal size for room labels
 
-        # UI fonts always stay normal size for readability
-        ui_font_size = 26
-        ui_small_font_size = 20
-        ui_tiny_font_size = 16
-        button_font_size = 18
+        # UI fonts adjusted for smaller screen
+        ui_font_size = 22
+        ui_small_font_size = 16
+        ui_tiny_font_size = 14
+        button_font_size = 16
 
         try:
             room_font = pygame.font.SysFont("Arial", room_font_size)  # For room labels
@@ -1630,12 +1640,12 @@ class MDPVisualizer:
             tiny_font = pygame.font.SysFont(None, ui_tiny_font_size)
             button_font = pygame.font.SysFont(None, button_font_size)
 
-        # Reset button (moved down to avoid text overlap)
-        reset_button = Button(40, 220, 180, 36, "New Episode")
+        # Reset button (moved to same height as movement buttons, with green color)
+        reset_button = Button(40, screen_height - 60, 150, 30, "New Episode", color='#28a745', hover_color='#218838')
 
-        # Stochasticity control button (moved down to avoid text overlap)
+        # Stochasticity control button (moved to same height as movement buttons, with grey color)
         stochasticity_labels = ["Deterministic", "Moderate", "High"]
-        stochasticity_button = Button(240, 220, 180, 36, f"Stoch: {stochasticity_labels[stochasticity]}")
+        stochasticity_button = Button(200, screen_height - 60, 180, 30, f"Stoch: {stochasticity_labels[stochasticity]}", color='#6c757d', hover_color='#5a6268')
 
         # Create action buttons
         action_buttons = []
@@ -1722,15 +1732,15 @@ class MDPVisualizer:
                         action_key_mapping[key] = action
                         fallback_index += 1
 
-            # Create buttons with key labels
-            button_y = screen_height - padding + 20
-            button_width = 150
-            button_height = 36
-            button_margin = 10
+            # Create buttons with key labels - positioned at bottom right
+            button_y = screen_height - 60  # Higher up to avoid parameters text
+            button_width = 120
+            button_height = 30
+            button_margin = 8
 
-            # Calculate starting x position to center buttons
+            # Calculate starting x position to align buttons to the right
             total_width = len(actions) * (button_width + button_margin) - button_margin
-            start_x = (screen_width - total_width) // 2
+            start_x = screen_width - total_width - 20  # 20px margin from right edge
 
             for i, action in enumerate(actions):
                 button_x = start_x + i * (button_width + button_margin)
@@ -1742,10 +1752,7 @@ class MDPVisualizer:
                 # Get key assignment
                 key, key_label = key_assignments.get(action, (None, ""))
 
-                if q_val != 0:
-                    button_text = f"{key_label} Go to {target_room} ({q_val:.2f})"
-                else:
-                    button_text = f"{key_label} Go to {target_room}"
+                button_text = f"{key_label} Go to {target_room}"
 
                 action_buttons.append((Button(button_x, button_y, button_width, button_height, button_text), action))
 
@@ -2044,17 +2051,17 @@ class MDPVisualizer:
                                       points[-1], pulse_size)
 
             # Draw game information
-            info_bg = pygame.Surface((screen_width - 340, 260))  # Extended height to cover buttons
+            info_bg = pygame.Surface((screen_width, 130))
             info_bg.fill(pygame.Color('#f8f9fa'))
             info_bg.set_alpha(230)
-            screen.blit(info_bg, (20, 20))
+            screen.blit(info_bg, (0, 0))
 
             # Draw episode reward table
             if episode_rewards:
                 # Calculate table dimensions
-                table_width = 180
-                table_row_height = 25
-                max_rows = 15  # Show at most 15 episodes in the table
+                table_width = 160
+                table_row_height = 20
+                max_rows = 12  # Show at most 12 episodes in the table
                 visible_episodes = episode_rewards[-max_rows:] if len(episode_rewards) > max_rows else episode_rewards
                 table_height = table_row_height * (len(visible_episodes) + 1)  # +1 for header
 
@@ -2129,63 +2136,101 @@ class MDPVisualizer:
                 status_color = pygame.Color(COLORS['text'])
 
             status_text = font.render(status, True, status_color)
-            screen.blit(status_text, (40, 30))
+            screen.blit(status_text, (40, 10))
 
-            # Current state and reward info
+            # Calculate metadata values
+            steps_taken = len(path) - 1  # -1 because path includes starting position
+            exploration_percent = (len(explored_states) / len(adj)) * 100
+            best_reward = max([reward for _, reward in episode_rewards]) if episode_rewards else 0.0
+
+            # Best Reward at top center in pill-shaped box
+            best_color = pygame.Color('#28a745') if best_reward > 0 else pygame.Color('#dc3545') if best_reward < 0 else pygame.Color(COLORS['text'])
+            best_reward_text = font.render(f"Best Reward: {best_reward:.2f}", True, best_color)
+
+            # Create pill-shaped box
+            text_width = best_reward_text.get_width()
+            text_height = best_reward_text.get_height()
+            box_padding = 6
+            box_width = text_width + box_padding * 2
+            box_height = text_height + box_padding
+            center_x = screen_width // 2 - box_width // 2
+            box_y = 6
+
+            # Draw pill-shaped background with outline
+            try:
+                # Main background
+                pygame.draw.rect(screen, pygame.Color('#f8f9fa'),
+                               (center_x, box_y, box_width, box_height),
+                               border_radius=box_height//2)
+                # Black outline
+                pygame.draw.rect(screen, pygame.Color('#000000'),
+                               (center_x, box_y, box_width, box_height),
+                               width=2, border_radius=box_height//2)
+            except:
+                # Fallback for older pygame versions
+                pygame.draw.rect(screen, pygame.Color('#f8f9fa'),
+                               (center_x, box_y, box_width, box_height))
+                pygame.draw.rect(screen, pygame.Color('#000000'),
+                               (center_x, box_y, box_width, box_height), 2)
+
+            # Draw text centered in the box
+            text_x = center_x + box_padding
+            text_y = box_y + box_padding // 2
+            screen.blit(best_reward_text, (text_x, text_y))
+
+            # FIRST COLUMN: Basic game state
             state_info = small_font.render(f"Current Room: {current_state}", True, pygame.Color(COLORS['text']))
-            screen.blit(state_info, (40, 70))
+            screen.blit(state_info, (40, 40))
 
-            # Episode and total reward
-            episode_reward_text = small_font.render(f"Episode Reward: {episode_reward:.2f}", True, pygame.Color(COLORS['text']))
-            screen.blit(episode_reward_text, (40, 100))
+            steps_text = small_font.render(f"Steps This Episode: {steps_taken}", True, pygame.Color(COLORS['text']))
+            screen.blit(steps_text, (40, 70))
 
-            total_reward_text = small_font.render(f"Total Reward: {total_reward:.2f}", True, pygame.Color(COLORS['text']))
-            screen.blit(total_reward_text, (40, 130))
+            exploration_text = small_font.render(f"States Explored: {len(explored_states)}/{len(adj)} ({exploration_percent:.1f}%)", True, pygame.Color(COLORS['text']))
+            screen.blit(exploration_text, (40, 100))
 
-            # Last action info (intended vs actual)
+            # SECOND COLUMN: Last action details
             if last_action is not None:
                 action_color = pygame.Color('#0066cc')  # Blue
                 if last_intended != last_actual:
                     action_color = pygame.Color('#ff9900')  # Orange for stochastic outcome
 
-                action_text = small_font.render(
-                    f"Last Action: {last_action} → intended: {last_intended}, actual: {last_actual}, reward: {last_reward:.2f}",
-                    True, action_color)
-                screen.blit(action_text, (40, 160))
+                action_text = small_font.render(f"Last Action: {last_action}", True, action_color)
+                screen.blit(action_text, (320, 40))
 
-            # Additional agent exploration metadata
-            steps_taken = len(path) - 1  # -1 because path includes starting position
-            exploration_percent = (len(explored_states) / len(adj)) * 100
+                intended_text = small_font.render(f"  Intended: {last_intended}", True, action_color)
+                screen.blit(intended_text, (320, 70))
 
-            # Calculate average Q-value for current state
-            current_q_avg = 0
-            if current_state in q_values and q_values[current_state]:
-                current_q_avg = sum(q_values[current_state].values()) / len(q_values[current_state])
+                actual_text = small_font.render(f"  Actual: {last_actual}", True, action_color)
+                screen.blit(actual_text, (320, 100))
 
-            # Calculate best reward achieved so far
-            best_reward = max([reward for _, reward in episode_rewards]) if episode_rewards else 0.0
+            # THIRD COLUMN: Reward information
+            # Current reward (last action reward)
+            current_reward_color = pygame.Color(COLORS['text'])
+            if last_reward is not None:
+                if last_reward > 0:
+                    current_reward_color = pygame.Color('#28a745')  # Green for positive
+                elif last_reward < 0:
+                    current_reward_color = pygame.Color('#dc3545')  # Red for negative
+                current_reward_text = small_font.render(f"Current Reward: {last_reward:.2f}", True, current_reward_color)
+            else:
+                current_reward_text = small_font.render("Current Reward: N/A", True, current_reward_color)
+            screen.blit(current_reward_text, (620, 40))
 
-            # Additional metadata
-            steps_text = small_font.render(f"Steps This Episode: {steps_taken}", True, pygame.Color(COLORS['text']))
-            screen.blit(steps_text, (320, 70))
+            # Episode reward
+            episode_reward_color = pygame.Color('#28a745') if episode_reward > 0 else pygame.Color('#dc3545') if episode_reward < 0 else pygame.Color(COLORS['text'])
+            episode_reward_text = small_font.render(f"Episode Reward: {episode_reward:.2f}", True, episode_reward_color)
+            screen.blit(episode_reward_text, (620, 70))
 
-            exploration_text = small_font.render(f"States Explored: {len(explored_states)}/{len(adj)} ({exploration_percent:.1f}%)", True, pygame.Color(COLORS['text']))
-            screen.blit(exploration_text, (320, 100))
+            # Total reward
+            total_reward_text = small_font.render(f"Total Reward: {total_reward:.2f}", True, pygame.Color(COLORS['text']))
+            screen.blit(total_reward_text, (620, 100))
 
-            q_avg_text = small_font.render(f"Avg Q-value (current state): {current_q_avg:.3f}", True, pygame.Color(COLORS['text']))
-            screen.blit(q_avg_text, (320, 130))
-
-            # Display best reward with color coding in third column
-            best_color = pygame.Color('#28a745') if best_reward > 0 else pygame.Color('#dc3545') if best_reward < 0 else pygame.Color(COLORS['text'])
-            best_reward_text = small_font.render(f"Best Reward: {best_reward:.2f}", True, best_color)
-            screen.blit(best_reward_text, (620, 70))
-
-            # Game parameters (combined into one line)
+            # Game parameters (combined into one line) - moved to very bottom
             stoch_probs = {0: "1.0", 1: "0.8", 2: "0.5"}[stochasticity]
             params_text = tiny_font.render(
                 f"Parameters: γ={gamma}, step_cost={step_cost}, Prob(intended move): {stoch_probs} (stoch = {stochasticity})",
                 True, pygame.Color('#666666'))
-            screen.blit(params_text, (40, 190))
+            screen.blit(params_text, (40, screen_height - 25))  # 15px from bottom
 
             # Draw action buttons if not game over (or allow reset)
             if not game_over:
