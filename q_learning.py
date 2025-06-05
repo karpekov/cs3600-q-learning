@@ -738,8 +738,6 @@ def create_static_visualization(data_file, output_dir, room_coords=None, graph_t
     ax1.set_ylabel('Reward', color=colors['text'])
     ax1.set_xlabel('Episode', color=colors['text'])
     ax1.grid(True, linestyle='--', alpha=0.3)
-    ax1.set_title(f'Training Progress: ε_start={initial_epsilon:.3f}, ε_decay={epsilon_decay:.5f}, ε_final={epsilon:.3f}, α_start={initial_alpha:.3f}, α_decay={alpha_decay_rate:.3f}, α_final={alpha:.3f}, γ={gamma}, step_cost={step_cost}, stochasticity={stochasticity}',
-                 fontsize=12, color=colors['text'])
     ax1.legend()
 
     # Plot episode length history (bottom left)
@@ -822,7 +820,11 @@ def create_static_visualization(data_file, output_dir, room_coords=None, graph_t
         ax.spines['left'].set_alpha(0.3)
         ax.tick_params(colors=colors['text'])
 
-    plt.tight_layout()
+    # Add figure-level title (centered over all subplots)
+    fig.suptitle(f'Training Progress: ε_start={initial_epsilon:.3f}, ε_decay={epsilon_decay:.5f}, ε_final={epsilon:.3f}, α_start={initial_alpha:.3f}, α_decay={alpha_decay_rate:.3f}, α_final={alpha:.3f}, γ={gamma}, step_cost={step_cost}, stochasticity={stochasticity}',
+                fontsize=12, color=colors['text'], y=0.98)
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])  # Leave space for the suptitle
     history_file = os.path.join(graph_output_dir, f"history.png")
     plt.savefig(history_file, dpi=150, bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none')
     plt.close()
@@ -846,7 +848,7 @@ def run_experiments(graph_type="custom_rooms"):
         {"step_cost": 0, "gamma": 0.999, "epsilon": 0.0, "epsilon_decay": 1.0, "epsilon_min": 0.0, "alpha": 0.1, "alpha_decay_rate": 0.002, "optimistic_init": 10.0},
 
         # Negative step cost, decaying exporation.
-        {"step_cost": -1, "gamma": 0.999, "epsilon": 0.8, "epsilon_decay": 0.99995, "epsilon_min": 0.01, "alpha": 0.1, "alpha_decay_rate": 0.002, "optimistic_init": 100.0},
+        {"step_cost": -1, "gamma": 0.999, "epsilon": 0.8, "epsilon_decay": 0.99995, "epsilon_min": 0.0, "alpha": 0.1, "alpha_decay_rate": 0.002, "optimistic_init": 100.0},
     ]
 
     # Group experiments by stochasticity level
@@ -925,7 +927,7 @@ def run_experiments(graph_type="custom_rooms"):
         print(f"{'='*50}")
         for i, result in enumerate(results):
             config = result["config"]
-            print(f"Exp {i+1:02d}: Final Avg Reward: {result['final_avg_reward']:.2f} |" +
+            print(f"Exp {i+1:02d}: Final Avg Reward: {result['final_avg_reward']:4.1f} |" +
                   f" ε={config['epsilon']}, α={config['alpha']}, γ={config['gamma']}, step_c={config['step_cost']}, ε_decay={config['epsilon_decay']}, ε_min={config['epsilon_min']}, α_decay={config['alpha_decay_rate']}, Q_init={config['optimistic_init']}")
 
         print(f"\nStochasticity {stochasticity} experiments saved to: {stoch_dir}")

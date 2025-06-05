@@ -22,7 +22,7 @@ Q(s,a) ← Q(s,a) + α[r + γ·max_a'Q(s',a') - Q(s,a)]
 
 ## Quick Start
 
-### **1. Install dependencies (conda preferred):**
+### **1. Install dependencies:**
 
    **Option A: Using conda (recommended):**
    ```bash
