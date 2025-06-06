@@ -400,7 +400,7 @@ class MDPVisualizer:
 
             plt.title(f"Episode {idx+1}/{num_episodes} - Steps: {episode['step_count']} - Reward: {episode['total_reward']:.2f}")
             plt.tight_layout()
-            plt.savefig(f"visualizations/episode_{idx+1}.png", dpi=150)
+            plt.savefig(os.path.join("visualizations", f"episode_{idx+1}.png"), dpi=150)
             plt.close()
 
         print(f"Created static visualizations in the 'visualizations' directory")

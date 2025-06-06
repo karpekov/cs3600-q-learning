@@ -48,7 +48,7 @@ Q(s,a) ← Q(s,a) + α[r + γ·max_a'Q(s',a') - Q(s,a)]
    ```bash
    python q_learning.py \
        --graph-type complex_maze \
-       --episodes 10000 \
+       --episodes 1000000 \
        --gamma 0.9 \
        --epsilon 0.8 \
        --epsilon-decay 0.999 \

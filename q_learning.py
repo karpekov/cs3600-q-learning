@@ -335,9 +335,9 @@ class QLearningAgent:
         data = self.get_visualization_data()
 
         # If filename doesn't include directory, put it in the data directory
-        if '/' not in filename:
+        if os.path.dirname(filename) == '':
             os.makedirs('q_learning_data', exist_ok=True)
-            filename = f'q_learning_data/{filename}'
+            filename = os.path.join('q_learning_data', filename)
         else:
             # Create the directory for the specified path
             os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -1042,5 +1042,5 @@ def run_q_learning_experiment_in_debug_mode(graph_type="custom_rooms"):
     display_policy(agent, adj, terminal_rewards)
 
 if __name__ == "__main__":
-    # run_q_learning_experiment_in_debug_mode("complex_maze")
+    run_q_learning_experiment_in_debug_mode("complex_maze")
     main()
