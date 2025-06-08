@@ -2,6 +2,10 @@
 
 This repository provides an interactive Q-learning implementation for exploring room environments as part of the CS3600 (Introduction to Artificial Intelligence) course at Georgia Tech. It contains implementations of Q-learning algorithms with step-by-step visualization capabilities and human play modes for different graph structures and stochasticity levels.
 
+Below is a demo of the Q-learning algorithm in action, where the agent learns to navigate a complex maze environment. The agent explores the maze, updates its Q-values, and gradually learns the optimal policy to reach the goal state while avoiding negative rewards:
+
+![Q-learning Maze Demo](assets/q-learning-experiments.gif)
+
 ## Overview
 
 ### Q-Learning Algorithm
@@ -38,13 +42,22 @@ Q(s,a) ← Q(s,a) + α[r + γ·max_a'Q(s',a') - Q(s,a)]
 
 
 ### **2. Human Play Mode:**
-   ```bash
-   python interactive_visualizer.py --human-play --graph-type simple_grid
-   python interactive_visualizer.py --human-play --graph-type complex_maze
 
+In human play mode, the player cannot see the surrounding environment, but can navigate the maze using arrow keys. The player can explore the maze and see how the agent would behave in that state.
+
+To run the interactive visualizer in human play mode, use the following command:
+
+   ```bash
+   python interactive_visualizer.py --human-play --graph-type complex_maze
    ```
 
+The demo video below shows what the human play mode looks like in action:
+![Human Play Mode Demo](assets/q-learning-human-play.gif)
+
 ### **3. Run single Q-learning experiment:**
+
+To train a Q-learning agent, use the following command:
+
    ```bash
    python q_learning.py \
        --graph-type complex_maze \
@@ -78,7 +91,6 @@ The experiment results are saved in the `q_learning_experiments/` folder.
 To run multiple experiments, use the `--run-experiments` flag. The experiment config is defined in the `q_learning.py` file.
 
    ```bash
-   python q_learning.py --run-experiments --graph-type simple_grid
    python q_learning.py --run-experiments --graph-type complex_maze
    ```
 
@@ -86,10 +98,9 @@ The experiment results are saved in the `q_learning_experiments/` folder.
 
 ### **5. Visualize Q-learning Experiments:**
 
-To instantiate the pygame visualization, run:
+To visualize the Q-learning experiments, use the following command:
 
    ```bash
-   python interactive_visualizer.py --experiments --graph-type simple_grid
    python interactive_visualizer.py --experiments --graph-type complex_maze
    ```
 
@@ -106,12 +117,12 @@ To instantiate the pygame visualization, run:
 - `custom_rooms` - 13-state room environment with goal and pit
 - `complex_maze` - Large maze environment (400+ states)
 
-To visualize all graphs, run:
+To create a `.png` visual of all available graphs, run:
 ```bash
 python graph_definitions.py
 ```
 
-The graphs are saved in the `graphs/` folder.
+The charts are saved in the `graphs/` folder.
 
 
 ## Debug Mode

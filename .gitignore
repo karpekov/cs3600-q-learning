@@ -147,11 +147,8 @@ q_learning_experiments/
 visualizations/
 *.json
 *.csv
-*.png
 *.jpg
 *.jpeg
-*.gif
-*.svg
 
 # IDE specific
 .vscode/
@@ -182,3 +179,8 @@ conda-meta/
 # Pygame specific
 *.pyc
 .pygame_cache/
+
+# Repo specific
+/q_learning_data
+/q_learning_experiments
+/visualizations
